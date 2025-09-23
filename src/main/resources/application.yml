@@ -1,0 +1,35 @@
+# 服务器配置
+server:
+  port: 16999
+
+# 数据库配置
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/qiniuyun?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: ${MYSQL_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+# MyBatis-Plus配置
+mybatis-plus:
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: com.aichat.roleplay.model
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+# LangChain4j OpenAI配置
+langchain4j:
+  open-ai:
+    chat-model:
+      api-key: ${OPENAI_API_KEY:sk-test}
+      model-name: gpt-4
+      temperature: 0.7
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.aichat.roleplay: DEBUG
