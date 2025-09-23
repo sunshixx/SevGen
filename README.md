@@ -7,9 +7,9 @@
 - Java 17
 - Spring Boot 3.2.0
 - Spring Data JPA
-- Spring Security
 - MySQL
 - Spring AI (OpenAI集成)
+- LangChain4J
 
 ## 项目结构
 
