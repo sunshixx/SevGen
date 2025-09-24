@@ -12,6 +12,8 @@ import com.aichat.roleplay.model.Role;
 import com.aichat.roleplay.model.User;
 import com.aichat.roleplay.service.IAiChatService;
 import com.aichat.roleplay.service.IUserService;
+import com.aichat.roleplay.validator.ValidatorContainer;
+import com.aichat.roleplay.validator.ValidationScene;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +42,9 @@ public class MessageController {
     private final IAiChatService aiChatService;
 
     @Autowired
+    private ValidatorContainer validatorContainer;
+
+    @Autowired
     public MessageController(MessageMapper messageMapper,
                              ChatMapper chatMapper,
                              RoleMapper roleMapper,
@@ -58,9 +63,15 @@ public class MessageController {
     @PostMapping
     public ApiResponse<Map<String, Message>> sendMessage(@Valid @RequestBody SendMessageRequest request) {
         log.info("发送消息，聊天ID: {}, 内容长度: {}", request.getChatId(), request.getContent().length());
-
         try {
             User user = getCurrentUser();
+
+            // 通过容器获取责任链并校验
+            String errorMsg = validatorContainer.getChain(ValidationScene.CHAT).validate(request.getContent());
+            if (errorMsg != null) {
+                log.warn("消息内容校验失败: {}", errorMsg);
+                return ApiResponse.badRequest(errorMsg);
+            }
 
             // 验证聊天会话权限
             Chat chat = validateChatAccess(request.getChatId(), user.getId());
