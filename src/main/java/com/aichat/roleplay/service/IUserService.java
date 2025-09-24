@@ -74,4 +74,30 @@ public interface IUserService {
      * @return 是否匹配
      */
     boolean validatePassword(String rawPassword, String encodedPassword);
+
+    /**
+     * 发送邮箱验证码
+     *
+     * @param email 邮箱地址
+     * @return 操作是否成功
+     */
+    boolean sendVerificationCode(String email);
+
+    /**
+     * 验证邮箱验证码
+     *
+     * @param email 邮箱地址
+     * @param code  验证码
+     * @return 验证是否通过
+     */
+    boolean verifyCode(String email, String code);
+
+    /**
+     * 用户登录认证
+     *
+     * @param username 用户名
+     * @param password 密码
+     * @return 用户信息（如果认证成功）
+     */
+    Optional<User> authenticateUser(String username, String password);
 }
