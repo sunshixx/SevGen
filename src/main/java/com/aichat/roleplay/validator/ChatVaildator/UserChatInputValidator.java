@@ -22,9 +22,7 @@ public class UserChatInputValidator {
         validators.add(validator);
     }
 
-    /**
-     * 校验并返回第一个不通过的错误信息，全部通过返回null
-     */
+
     public String validateWithError(String input) {
         for (InputValidator validator : validators) {
             if (!validator.validate(input)) {

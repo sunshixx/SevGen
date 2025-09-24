@@ -15,9 +15,7 @@ public class ChatInputValidatorChain {
         validators.add(validator);
     }
 
-    /**
-     * 校验输入内容，返回第一个不通过的错误信息，全部通过返回null
-     */
+
     public String validate(String input) {
         for (InputValidator validator : validators) {
             if (!validator.validate(input)) {

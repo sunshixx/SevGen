@@ -19,18 +19,16 @@ public class ValidatorContainer {
 
     @PostConstruct
     public void init() {
-        // 聊天场景责任链
         ChatInputValidatorChain chatChain = new ChatInputValidatorChain();
         chatChain.addValidator(new EmptyContentValidator());
         chatChain.addValidator(new LengthValidator(500));
         chatChain.addValidator(new SensitiveWordValidator(List.of("敏感词1", "敏感词2")));
         sceneValidatorMap.put(ValidationScene.CHAT, chatChain);
 
-        // 注册场景责任链（可自定义）
+
         ChatInputValidatorChain registerChain = new ChatInputValidatorChain();
         registerChain.addValidator(new EmptyContentValidator());
         registerChain.addValidator(new LengthValidator(30));
-        // 可添加注册相关的特殊校验器
         sceneValidatorMap.put(ValidationScene.REGISTER, registerChain);
     }
 

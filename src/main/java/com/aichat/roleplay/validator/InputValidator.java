@@ -6,8 +6,6 @@ package com.aichat.roleplay.validator;
 public interface InputValidator {
     /**
      * 校验输入内容
-     * @param input 输入内容
-     * @return 校验通过返回true，否则false
      */
     boolean validate(String input);
 

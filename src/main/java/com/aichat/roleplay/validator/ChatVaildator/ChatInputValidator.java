@@ -9,11 +9,7 @@ import com.aichat.roleplay.validator.InputValidator;
 public abstract class ChatInputValidator implements InputValidator {
     protected String errorMessage;
 
-    /**
-     * 校验用户输入内容
-     * @param input 用户输入内容
-     * @return 校验通过返回true，否则false
-     */
+
     public abstract boolean validate(String input);
 
     @Override
