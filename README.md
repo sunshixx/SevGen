@@ -6,10 +6,10 @@
 
 - Java 17
 - Spring Boot 3.2.0
-- Spring Data JPA
-- Spring Security
+- Redis
+- JWT
 - MySQL
-- Spring AI (OpenAI集成)
+- LangChain4J
 
 ## 配置要求
 
