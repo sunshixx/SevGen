@@ -1,6 +1,7 @@
 package com.aichat.roleplay.controller;
 
 import com.aichat.roleplay.common.ApiResponse;
+import com.aichat.roleplay.context.UserContext;
 import com.aichat.roleplay.dto.SendMessageRequest;
 import com.aichat.roleplay.mapper.ChatMapper;
 import com.aichat.roleplay.mapper.MessageMapper;
@@ -11,11 +12,10 @@ import com.aichat.roleplay.model.Role;
 import com.aichat.roleplay.model.User;
 import com.aichat.roleplay.service.IAiChatService;
 import com.aichat.roleplay.service.IUserService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -64,12 +64,11 @@ public class MessageController {
      * @return 用户消息和AI回复
      */
     @PostMapping
-    public ApiResponse<Map<String, Message>> sendMessage(@Validated @RequestBody SendMessageRequest request,
-                                                         Authentication authentication) {
+    public ApiResponse<Map<String, Message>> sendMessage(@Valid @RequestBody SendMessageRequest request) {
         log.info("发送消息，聊天ID: {}, 内容长度: {}", request.getChatId(), request.getContent().length());
 
         try {
-            User user = getCurrentUser(authentication);
+            User user = getCurrentUser();
 
             // 验证聊天会话权限
             Chat chat = validateChatAccess(request.getChatId(), user.getId());
@@ -111,12 +110,11 @@ public class MessageController {
      * @return 用户消息（AI回复将通过SSE推送）
      */
     @PostMapping("/async")
-    public ApiResponse<Message> sendMessageAsync(@Validated @RequestBody SendMessageRequest request,
-                                                 Authentication authentication) {
+    public ApiResponse<Message> sendMessageAsync(@Valid @RequestBody SendMessageRequest request) {
         log.info("异步发送消息，聊天ID: {}", request.getChatId());
 
         try {
-            User user = getCurrentUser(authentication);
+            User user = getCurrentUser();
 
             // 验证聊天会话权限
             Chat chat = validateChatAccess(request.getChatId(), user.getId());
@@ -151,12 +149,11 @@ public class MessageController {
      * @return 消息列表
      */
     @GetMapping("/chat/{chatId}")
-    public ApiResponse<List<Message>> getChatMessages(@PathVariable Long chatId,
-                                                      Authentication authentication) {
+    public ApiResponse<List<Message>> getChatMessages(@PathVariable Long chatId) {
         log.debug("获取聊天消息，聊天ID: {}", chatId);
 
         try {
-            User user = getCurrentUser(authentication);
+            User user = getCurrentUser();
 
             // 验证聊天会话权限
             validateChatAccess(chatId, user.getId());
@@ -183,12 +180,11 @@ public class MessageController {
      * @return 未读消息列表
      */
     @GetMapping("/chat/{chatId}/unread")
-    public ApiResponse<List<Message>> getUnreadMessages(@PathVariable Long chatId,
-                                                        Authentication authentication) {
+    public ApiResponse<List<Message>> getUnreadMessages(@PathVariable Long chatId) {
         log.debug("获取未读消息，聊天ID: {}", chatId);
 
         try {
-            User user = getCurrentUser(authentication);
+            User user = getCurrentUser();
 
             // 验证聊天会话权限
             validateChatAccess(chatId, user.getId());
@@ -211,12 +207,11 @@ public class MessageController {
      * @return 操作结果
      */
     @PutMapping("/chat/{chatId}/read")
-    public ApiResponse<String> markMessagesAsRead(@PathVariable Long chatId,
-                                                  Authentication authentication) {
+    public ApiResponse<String> markMessagesAsRead(@PathVariable Long chatId) {
         log.info("标记消息已读，聊天ID: {}", chatId);
 
         try {
-            User user = getCurrentUser(authentication);
+            User user = getCurrentUser();
 
             // 验证聊天会话权限
             validateChatAccess(chatId, user.getId());
@@ -237,10 +232,12 @@ public class MessageController {
      * @param authentication 认证信息
      * @return 用户信息
      */
-    private User getCurrentUser(Authentication authentication) {
-        String username = authentication.getName();
-        return userService.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("用户不存在"));
+    private User getCurrentUser() {
+        User user = UserContext.getCurrentUser();
+        if (user == null) {
+            throw new RuntimeException("用户未登录");
+        }
+        return user;
     }
 
     /**

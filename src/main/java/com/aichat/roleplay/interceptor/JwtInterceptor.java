@@ -4,6 +4,8 @@ import com.aichat.roleplay.context.UserContext;
 import com.aichat.roleplay.model.User;
 import com.aichat.roleplay.service.IUserService;
 import com.aichat.roleplay.util.JwtUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -14,11 +16,11 @@ import java.util.Optional;
 
 /**
  * JWT拦截器
- * 处理请求中的JWT token并设置用户上下文
  */
 @Component
 public class JwtInterceptor implements HandlerInterceptor {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtInterceptor.class);
     @Autowired
     private JwtUtil jwtUtil;
 
@@ -27,7 +29,6 @@ public class JwtInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 清除之前的用户上下文
         UserContext.clear();
 
         // 获取token
@@ -46,7 +47,7 @@ public class JwtInterceptor implements HandlerInterceptor {
                     }
                 }
             } catch (Exception e) {
-                // token无效，不设置用户上下文
+                logger.warn("请别忘了携带JWT Token进行请求，或者Token已过期");
             }
         }
         
@@ -55,7 +56,6 @@ public class JwtInterceptor implements HandlerInterceptor {
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        // 清除用户上下文
         UserContext.clear();
     }
 
