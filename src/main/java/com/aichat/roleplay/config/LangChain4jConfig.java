@@ -10,7 +10,6 @@ import java.time.Duration;
 
 /**
  * LangChain4j OpenAI配置类
- * 遵循单例模式和依赖倒置原则
  */
 @Configuration
 public class LangChain4jConfig {
@@ -25,9 +24,6 @@ public class LangChain4jConfig {
     private Double temperature;
 
     /**
-     * 创建ChatLanguageModel Bean
-     * 使用建造者模式配置OpenAI客户端
-     *
      * @return ChatLanguageModel实例
      */
     @Bean

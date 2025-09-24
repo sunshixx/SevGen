@@ -9,6 +9,19 @@ spring:
     username: root
     password: ${MYSQL_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: 1653719029@qq.com
+    password: zhjwlugiiyzyjjab
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    template:
+        from: 1653719029@qq.com
 
 # MyBatis-Plus配置
 mybatis-plus:

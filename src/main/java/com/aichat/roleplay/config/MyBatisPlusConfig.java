@@ -9,6 +9,4 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @MapperScan("com.aichat.roleplay.mapper")
 public class MyBatisPlusConfig {
-
-    // 移除分页插件配置，简化配置
 }

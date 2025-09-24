@@ -2,8 +2,6 @@ package com.aichat.roleplay.common;
 
 /**
  * 统一API响应结果类
- * 遵循SOLID原则中的单一职责原则
- * 提供标准化的API响应格式
  */
 public class ApiResponse<T> {
 

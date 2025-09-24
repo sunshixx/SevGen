@@ -6,6 +6,7 @@ import com.aichat.roleplay.dto.CreateChatRequest;
 import com.aichat.roleplay.model.Chat;
 import com.aichat.roleplay.model.User;
 import com.aichat.roleplay.service.IChatService;
+import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,27 +22,20 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/chats")
+@AllArgsConstructor
 public class ChatController {
 
     private static final Logger log = LoggerFactory.getLogger(ChatController.class);
 
     private final IChatService chatService;
 
-    /**
-     * 构造函数注入，遵循依赖倒置原则
-     *
-     * @param chatService 聊天会话服务
-     */
-    @Autowired
-    public ChatController(IChatService chatService) {
-        this.chatService = chatService;
-    }
+//    @Autowired
+//    public ChatController(IChatService chatService) {
+//        this.chatService = chatService;
+//    }
 
     /**
      * 创建新的聊天会话
-     *
-     * @param request 创建聊天请求
-     * @return 创建的聊天会话
      */
     @PostMapping
     public ApiResponse<Chat> createChat(@Validated @RequestBody CreateChatRequest request) {
