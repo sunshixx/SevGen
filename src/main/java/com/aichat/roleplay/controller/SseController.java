@@ -15,10 +15,7 @@ public class SseController {
     private SseService sseService;
 
     /**
-     * 建立SSE连接，订阅特定聊天的实时消息
-     *
-     * @param chatId 聊天ID
-     * @return SSE发射器
+     * 建立SSE连接，订阅聊天实时消息
      */
     @GetMapping("/subscribe/{chatId}")
     public SseEmitter subscribeToChat(@PathVariable Long chatId) {

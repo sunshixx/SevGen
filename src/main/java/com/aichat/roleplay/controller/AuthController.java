@@ -32,9 +32,6 @@ public class AuthController {
 
     /**
      * 用户登录
-     *
-     * @param request 登录请求
-     * @return 登录结果
      */
     @PostMapping("/login")
     public ApiResponse<?> login(@Valid @RequestBody LoginRequest request) {
@@ -76,17 +73,13 @@ public class AuthController {
 
     /**
      * 用户登出
-     *
-     * @return 登出结果
      */
     @PostMapping("/logout")
     public ApiResponse<?> logout() {
         log.info("用户登出");
 
         try {
-            // JWT是无状态的，客户端删除token即可
-            // 这里可以添加token黑名单逻辑（如果需要的话）
-            UserContext.clear(); // 清理当前线程的用户上下文
+            UserContext.clear();
 
             log.info("用户登出成功");
             return ApiResponse.success("登出成功");
@@ -99,8 +92,6 @@ public class AuthController {
 
     /**
      * 获取当前用户信息
-     *
-     * @return 当前用户信息
      */
     @GetMapping("/me")
     public ApiResponse<?> getCurrentUser() {
@@ -113,8 +104,6 @@ public class AuthController {
                 log.warn("获取当前用户失败：用户未登录");
                 return ApiResponse.error(401, "用户未登录");
             }
-
-            // 构建用户信息响应（不包含敏感信息）
             LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
                     currentUser.getId(),
                     currentUser.getUsername(),
@@ -133,9 +122,6 @@ public class AuthController {
 
     /**
      * 发送邮箱验证码
-     *
-     * @param request 发送验证码请求
-     * @return 操作结果
      */
     @PostMapping("/send-verification-code")
     public ApiResponse<?> sendVerificationCode(@Valid @RequestBody SendVerificationCodeRequest request) {
@@ -152,9 +138,6 @@ public class AuthController {
                 return ApiResponse.error("验证码发送失败，请检查邮箱地址或稍后重试");
             }
             
-        } catch (RuntimeException e) {
-            log.warn("发送验证码业务异常: {}", e.getMessage());
-            return ApiResponse.badRequest(e.getMessage());
         } catch (Exception e) {
             log.error("发送验证码异常", e);
             return ApiResponse.error("验证码发送失败，请稍后重试");
@@ -163,9 +146,6 @@ public class AuthController {
 
     /**
      * 用户注册
-     *
-     * @param request 注册请求
-     * @return 操作结果
      */
     @PostMapping("/register")
     public ApiResponse<?> register(@Valid @RequestBody RegisterRequest request) {
@@ -181,7 +161,7 @@ public class AuthController {
             // 创建用户对象
             User user = User.builder()
                     .username(request.getUsername())
-                    .password(request.getPassword()) // 实际项目中应该加密密码
+                    .password(request.getPassword())
                     .email(request.getEmail())
                     .active(true)
                     .build();
@@ -190,8 +170,7 @@ public class AuthController {
             User registeredUser = userService.registerUser(user);
 
             log.info("用户注册成功，用户ID: {}, 用户名: {}", registeredUser.getId(), registeredUser.getUsername());
-            
-            // 返回用户信息（不包含密码）
+
             registeredUser.setPassword(null);
             
             return ApiResponse.success("用户注册成功", registeredUser);
@@ -207,8 +186,6 @@ public class AuthController {
 
     /**
      * 健康检查接口
-     *
-     * @return 服务状态
      */
     @GetMapping("/health")
     public ApiResponse<?> health() {

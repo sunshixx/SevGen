@@ -25,8 +25,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * 消息控制器
- * 遵循SOLID原则中的单一职责原则和依赖倒置原则
- * 集成AI聊天功能，提供智能对话服务
+ * 提供聊天消息管理和AI对话功能
  */
 @RestController
 @RequestMapping("/api/messages")
@@ -40,9 +39,6 @@ public class MessageController {
     private final IUserService userService;
     private final IAiChatService aiChatService;
 
-    /**
-     * 构造函数注入，遵循依赖倒置原则
-     */
     @Autowired
     public MessageController(MessageMapper messageMapper,
                              ChatMapper chatMapper,
@@ -58,10 +54,6 @@ public class MessageController {
 
     /**
      * 发送消息并获取AI回复
-     *
-     * @param request        发送消息请求
-     * @param authentication 认证信息
-     * @return 用户消息和AI回复
      */
     @PostMapping
     public ApiResponse<Map<String, Message>> sendMessage(@Valid @RequestBody SendMessageRequest request) {
@@ -104,10 +96,6 @@ public class MessageController {
 
     /**
      * 异步发送消息（用于SSE场景）
-     *
-     * @param request        发送消息请求
-     * @param authentication 认证信息
-     * @return 用户消息（AI回复将通过SSE推送）
      */
     @PostMapping("/async")
     public ApiResponse<Message> sendMessageAsync(@Valid @RequestBody SendMessageRequest request) {
@@ -143,10 +131,6 @@ public class MessageController {
 
     /**
      * 获取聊天消息列表
-     *
-     * @param chatId         聊天ID
-     * @param authentication 认证信息
-     * @return 消息列表
      */
     @GetMapping("/chat/{chatId}")
     public ApiResponse<List<Message>> getChatMessages(@PathVariable Long chatId) {
@@ -174,10 +158,6 @@ public class MessageController {
 
     /**
      * 获取未读消息
-     *
-     * @param chatId         聊天ID
-     * @param authentication 认证信息
-     * @return 未读消息列表
      */
     @GetMapping("/chat/{chatId}/unread")
     public ApiResponse<List<Message>> getUnreadMessages(@PathVariable Long chatId) {
@@ -201,10 +181,6 @@ public class MessageController {
 
     /**
      * 标记消息为已读
-     *
-     * @param chatId         聊天ID
-     * @param authentication 认证信息
-     * @return 操作结果
      */
     @PutMapping("/chat/{chatId}/read")
     public ApiResponse<String> markMessagesAsRead(@PathVariable Long chatId) {
@@ -228,9 +204,6 @@ public class MessageController {
 
     /**
      * 获取当前用户
-     *
-     * @param authentication 认证信息
-     * @return 用户信息
      */
     private User getCurrentUser() {
         User user = UserContext.getCurrentUser();
@@ -242,10 +215,6 @@ public class MessageController {
 
     /**
      * 验证聊天会话访问权限
-     *
-     * @param chatId 聊天ID
-     * @param userId 用户ID
-     * @return 聊天会话
      */
     private Chat validateChatAccess(Long chatId, Long userId) {
         Chat chat = chatMapper.selectById(chatId);
@@ -262,10 +231,6 @@ public class MessageController {
 
     /**
      * 保存用户消息
-     *
-     * @param request 发送消息请求
-     * @param userId  用户ID
-     * @return 保存的消息
      */
     private Message saveUserMessage(SendMessageRequest request, Long userId) {
         Message message = Message.builder()
@@ -286,11 +251,6 @@ public class MessageController {
 
     /**
      * 生成AI回复
-     *
-     * @param chat          聊天会话
-     * @param userMessage   用户消息
-     * @param userMessageId 用户消息ID
-     * @return AI回复消息
      */
     private Message generateAiResponse(Chat chat, String userMessage, Long userMessageId) {
         // 获取角色信息
@@ -336,10 +296,6 @@ public class MessageController {
 
     /**
      * 创建错误消息
-     *
-     * @param chatId       聊天ID
-     * @param errorContent 错误内容
-     * @return 错误消息
      */
     private Message createErrorMessage(Long chatId, String errorContent) {
         Message errorMessage = Message.builder()
