@@ -63,7 +63,9 @@
         
         <el-form-item prop="confirmPassword">
           <el-input
+
             v-model="registerForm.confirmPassword"
+
             type="password"
             placeholder="确认密码"
             prefix-icon="Lock"
@@ -108,6 +110,7 @@ const authStore = useAuthStore()
 const registerFormRef = ref<FormInstance>()
 
 // 注册表单数据
+
 const registerForm = reactive<RegisterRequest & { confirmPassword: string }>({
   username: '',
   email: '',
@@ -128,7 +131,9 @@ const canSendCode = computed(() => {
 })
 
 // 自定义验证函数
+
 const validateConfirmPassword = (_rule: any, value: any, callback: any) => {
+
   if (value === '') {
     callback(new Error('请确认密码'))
   } else if (value !== registerForm.password) {
@@ -204,11 +209,13 @@ const handleRegister = async () => {
     // 验证表单
     await registerFormRef.value.validate()
     
+
     // 准备注册数据（去除confirmPassword字段）
     const { confirmPassword, ...registerData } = registerForm
     
     // 执行注册
     const result = await authStore.register(registerData as RegisterRequest)
+
     
     if (result.success) {
       ElMessage.success('注册成功！请登录')
