@@ -47,8 +47,7 @@ langchain4j:
     chat-model:
       base-url: https://openai.qiniu.com/v1
       api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
-
-      model-name: MiniMax-M1
+      model-name: deepseek/deepseek-v3.1-terminus
 
       temperature: 0.7
 

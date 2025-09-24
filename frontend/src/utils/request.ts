@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 // 创建axios实例
 const request: AxiosInstance = axios.create({
   baseURL: '/api',
-  timeout: 30000, // 增加超时时间到30秒
+  timeout: 30000, // 默认30秒超时
   headers: {
     'Content-Type': 'application/json'
   }
@@ -47,14 +47,45 @@ request.interceptors.response.use(
       return response
     }
     
-    // 检查是否是标准的ApiResponse格式
+    // 检查是否是后端标准格式 { code, message, data, timestamp }
+    if (data && typeof data === 'object' && 'code' in data) {
+      // 将后端格式转换为前端期望格式
+      const success = data.code === 200
+      const convertedResponse = {
+        success: success,
+        data: data.data,
+        message: data.message
+      }
+      
+      // 处理业务逻辑错误
+      if (!success) {
+        const errorMessage = data.message || '请求失败'
+        ElMessage.error(errorMessage)
+        
+        // 401错误跳转到登录页
+        if (data.code === 401) {
+          localStorage.removeItem('token')
+          window.location.href = '/login'
+        }
+        
+        return Promise.reject(new Error(errorMessage))
+      }
+      
+      if (import.meta.env.DEV) {
+        console.log(`[Converted Response]`, convertedResponse)
+      }
+      
+      return convertedResponse
+    }
+    
+    // 检查是否是前端标准格式 { success, message, data }
     if (data && typeof data === 'object' && 'success' in data) {
       // 处理业务逻辑错误
       if (data.success === false) {
         const errorMessage = data.message || '请求失败'
         ElMessage.error(errorMessage)
         
-        // 401错误跳转到登录页
+        // 401错误跳转到登录页  
         if (data.code === 401) {
           localStorage.removeItem('token')
           window.location.href = '/login'

@@ -8,14 +8,14 @@ import type {
 
 // 消息相关API
 export const messageAPI = {
-  // 发送消息并获取AI回复
+  // 发送消息并获取AI回复 - 使用更长超时时间
   sendMessage: (data: SendMessageRequest): Promise<ApiResponse<SendMessageResponse>> => {
-    return request.post('/messages', data)
+    return request.post('/messages', data, { timeout: 90000 }) // 90秒超时
   },
 
   // 异步发送消息
   sendMessageAsync: (data: SendMessageRequest): Promise<ApiResponse<Message>> => {
-    return request.post('/messages/async', data)
+    return request.post('/messages/async', data, { timeout: 10000 }) // 异步接口10秒超时
   },
 
   // 获取聊天消息列表
