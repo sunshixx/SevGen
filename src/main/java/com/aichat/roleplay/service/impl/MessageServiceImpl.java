@@ -115,7 +115,7 @@ public class MessageServiceImpl implements IMessageService {
                 // 通过SSE发送实时消息
                 Chat chat = chatMapper.selectById(chatId);
                 if (chat != null && chat.getUserId() != null) {
-                    sseService.sendMessage(chat.getUserId().toString(), chatId, responseMessage);
+//                    sseService.sendMessage(chat.getUserId().toString(), chatId, responseMessage);
                 }
 
                 return responseMessage;

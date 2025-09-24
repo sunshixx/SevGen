@@ -28,6 +28,12 @@ public class Message implements Serializable {
     private Long chatId;
 
     /**
+     * 聊天会话ID
+     */
+    @TableField("role_id")
+    private Long roleId;
+
+    /**
      * 发送者类型：user 或 ai
      */
     @TableField("sender_type")
@@ -67,8 +73,9 @@ public class Message implements Serializable {
     // Constructors
     public Message() {}
 
-    public Message(Long chatId, String senderType, String content) {
+    public Message(Long chatId, Long roleId,String senderType, String content) {
         this.chatId = chatId;
+        this.roleId = roleId;
         this.senderType = senderType;
         this.content = content;
         this.isRead = false;
@@ -144,6 +151,7 @@ public class Message implements Serializable {
     public static MessageBuilder builder() {
         return new MessageBuilder();
     }
+
 
     public static class MessageBuilder {
         private Long id;

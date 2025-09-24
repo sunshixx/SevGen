@@ -1,11 +1,19 @@
 package com.aichat.roleplay.service.impl;
 
 import com.aichat.roleplay.service.IAiChatService;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.StreamingResponseHandler;
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.StreamingChatLanguageModel;
+import dev.langchain4j.model.output.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * AI聊天服务实现类
@@ -19,66 +27,16 @@ public class AiChatServiceImpl implements IAiChatService {
 
     private static final Logger log = LoggerFactory.getLogger(AiChatServiceImpl.class);
 
-    private final ChatLanguageModel chatLanguageModel;
+    private final StreamingChatLanguageModel streamingChatLanguageModel;
 
     /**
      * 构造函数注入，遵循依赖倒置原则
      *
-     * @param chatLanguageModel 聊天语言模型
+     * @param streamingChatLanguageModel 聊天语言模型
      */
     @Autowired
-    public AiChatServiceImpl(ChatLanguageModel chatLanguageModel) {
-        this.chatLanguageModel = chatLanguageModel;
-    }
-
-    @Override
-    public String generateRoleResponse(String rolePrompt, String userMessage, String chatHistory) {
-        log.debug("生成角色回复，角色提示: {}, 用户消息: {}", rolePrompt, userMessage);
-
-        try {
-            // 构建完整的提示词
-            String fullPrompt = buildRolePrompt(rolePrompt, userMessage, chatHistory);
-
-            // 调用AI模型生成回复
-            String response = chatLanguageModel.generate(fullPrompt);
-
-            log.debug("AI回复生成成功，长度: {}", response.length());
-            return response;
-
-        } catch (Exception e) {
-            log.error("生成AI回复失败", e);
-            throw new RuntimeException("AI服务暂时不可用，请稍后再试");
-        }
-    }
-
-    @Override
-    public String generateCharacterResponse(String roleName, String characterPrompt, String userMessage) {
-        log.debug("生成角色化回复，角色: {}, 消息: {}", roleName, userMessage);
-
-        // 使用策略模式构建不同类型的角色提示
-        String rolePrompt = buildCharacterPrompt(roleName, characterPrompt);
-        return generateRoleResponse(rolePrompt, userMessage, null);
-    }
-
-    @Override
-    public void generateStreamResponse(String rolePrompt, String userMessage, StreamResponseCallback callback) {
-        log.debug("开始流式生成AI回复");
-
-        try {
-            // 构建提示词
-            String fullPrompt = buildRolePrompt(rolePrompt, userMessage, null);
-
-            // 这里可以实现流式响应逻辑
-            // 由于LangChain4j的流式API可能不同，暂时使用普通方式模拟
-            String response = chatLanguageModel.generate(fullPrompt);
-
-            // 模拟流式传输，按字符分块发送
-            simulateStreamResponse(response, callback);
-
-        } catch (Exception e) {
-            log.error("流式生成AI回复失败", e);
-            callback.onResponse("AI服务暂时不可用，请稍后再试");
-        }
+    public AiChatServiceImpl(StreamingChatLanguageModel streamingChatLanguageModel) {
+        this.streamingChatLanguageModel = streamingChatLanguageModel;
     }
 
     /**
@@ -131,28 +89,71 @@ public class AiChatServiceImpl implements IAiChatService {
         return promptBuilder.toString();
     }
 
-    /**
-     * 模拟流式响应
-     *
-     * @param response 完整响应
-     * @param callback 回调函数
-     */
-    private void simulateStreamResponse(String response, StreamResponseCallback callback) {
-        // 简单的分块策略：按句子或标点分割
-        String[] chunks = response.split("(?<=[。！？，])");
 
-        for (String chunk : chunks) {
-            if (!chunk.trim().isEmpty()) {
-                callback.onResponse(chunk);
+    @Override
+    public String generateCharacterResponse(String roleName, String characterPrompt, String userMessage) {
+        return "";
+    }
 
-                // 模拟网络延迟
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
+    @Override
+    public void generateStreamResponse(String rolePrompt, String userMessage, StreamResponseCallback callback) {
+        log.debug("开始流式生成AI回复");
+
+        try {
+            // 构建提示词
+            String fullPrompt = buildRolePrompt(rolePrompt, userMessage, null);
+
+            // 准备消息（最简单只用 user message）
+            List<ChatMessage> messages = List.of(
+                    UserMessage.from(fullPrompt)
+            );
+
+            // 调用流式 API
+            streamingChatLanguageModel.generate(messages, new StreamingResponseHandler<AiMessage>() {
+                @Override
+                public void onNext(String token) {
+                    callback.onResponse(token);
                 }
-            }
+
+                @Override
+                public void onError(Throwable error) {
+                    log.error("流式生成AI回复失败", error);
+                    callback.onResponse("[ERROR]");
+                }
+
+                @Override
+                public void onComplete(Response<AiMessage> response) {
+                    if (response != null && response.content() != null) {
+                        String finalText = response.content().text();
+                        // 你可以在这里保存 finalText 到数据库
+                    } else {
+                        log.warn("流式回复完成，但 response 为空或无内容");
+                    }
+                    callback.onResponse("[DONE]");
+                }
+            });
+
+        } catch (Exception e) {
+            log.error("调用流式API失败", e);
+            callback.onResponse("[ERROR]");
         }
     }
+//    private String buildRolePrompt(String rolePrompt, String userMessage, String chatHistory) {
+//        StringBuilder promptBuilder = new StringBuilder();
+//
+//        if (rolePrompt != null && !rolePrompt.isEmpty()) {
+//            promptBuilder.append("你是一个AI角色扮演助手。请严格按照以下角色设定进行回复：\n");
+//            promptBuilder.append(rolePrompt).append("\n\n");
+//        }
+//
+//        if (chatHistory != null && !chatHistory.isEmpty()) {
+//            promptBuilder.append("聊天历史：\n");
+//            promptBuilder.append(chatHistory).append("\n\n");
+//        }
+//
+//        promptBuilder.append("用户说：").append(userMessage).append("\n\n");
+//        promptBuilder.append("请以角色的身份回复（不要说你是AI或角色扮演，直接以角色身份回应）：");
+//
+//        return promptBuilder.toString();
+//    }
 }
