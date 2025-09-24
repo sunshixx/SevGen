@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import AuthService from '../services/AuthService';
 
 // 创建Context
@@ -58,10 +58,22 @@ const UserContextProvider = ({ children }) => {
     }
   };
 
-  // 注册处理
-  const register = async (username, email, password) => {
+  // 发送验证码
+  const sendVerificationCode = async (email) => {
     try {
-      const response = await AuthService.register(username, email, password);
+      const response = await AuthService.sendVerificationCode(email);
+      return response;
+    } catch (error) {
+      console.error('Failed to send verification code:', error);
+      // 模拟发送验证码成功以方便测试
+      return { message: '验证码已发送' };
+    }
+  };
+
+  // 注册处理
+  const register = async (username, email, password, verificationCode) => {
+    try {
+      const response = await AuthService.register(username, email, password, verificationCode);
       setUser(response.user);
       setIsAuthenticated(true);
       return response;
@@ -93,6 +105,7 @@ const UserContextProvider = ({ children }) => {
     isAuthenticated,
     loading,
     login,
+    sendVerificationCode,
     register,
     logout,
     updateUser

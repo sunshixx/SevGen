@@ -1,5 +1,6 @@
 package com.aichat.roleplay.service.impl;
 
+import com.aichat.roleplay.dto.ChatSessionVO;
 import com.aichat.roleplay.mapper.ChatMapper;
 import com.aichat.roleplay.mapper.RoleMapper;
 import com.aichat.roleplay.model.Chat;
@@ -145,4 +146,10 @@ public class ChatServiceImpl implements IChatService {
         log.debug("获取用户与特定角色的聊天会话，用户ID: {}, 角色ID: {}", userId, roleId);
         return chatMapper.findByUserIdAndRoleId(userId, roleId);
     }
+//    @Override
+//    @Transactional(readOnly = true)
+//    public ChatSessionVO create(String query){
+//
+//
+//    }
 }

@@ -1,5 +1,6 @@
 package com.aichat.roleplay.service;
 
+import com.aichat.roleplay.dto.ChatSessionVO;
 import com.aichat.roleplay.model.Chat;
 
 import java.util.List;
@@ -75,4 +76,6 @@ public interface IChatService {
      * @return 聊天会话列表
      */
     List<Chat> getUserChatsByRole(Long userId, Long roleId);
+
+//    ChatSessionVO create(String query);
 }

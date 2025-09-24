@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TextField, Button, Container, Typography, Paper, Alert, Box } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
@@ -9,11 +9,15 @@ const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const navigate = useNavigate();
-  const { register, isAuthenticated } = useUser();
+  const { register, isAuthenticated, sendVerificationCode } = useUser();
 
   // 如果用户已登录，重定向到首页
   React.useEffect(() => {
@@ -22,6 +26,45 @@ const RegisterPage = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  const handleSendVerificationCode = async () => {
+    setError('');
+    
+    // 验证邮箱
+    if (!email) {
+      setError('请输入邮箱地址');
+      return;
+    }
+    
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    if (!emailRegex.test(email)) {
+      setError('请输入有效的邮箱地址');
+      return;
+    }
+    
+    setIsSendingCode(true);
+    try {
+      await sendVerificationCode(email);
+      setCodeSent(true);
+      setCountdown(60); // 60秒倒计时
+      
+      // 启动倒计时
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (error) {
+      setError('发送验证码失败，请重试');
+      console.error('Failed to send verification code:', error);
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -29,7 +72,7 @@ const RegisterPage = () => {
     setIsLoading(true);
 
     // 表单验证
-    if (!username || !email || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword || !verificationCode) {
       setError('请填写所有必填字段');
       setIsLoading(false);
       return;
@@ -55,15 +98,22 @@ const RegisterPage = () => {
       return;
     }
 
+    // 验证码验证
+    if (verificationCode.length !== 6 || !/^\d+$/.test(verificationCode)) {
+      setError('验证码必须是6位数字');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await register(username, email, password);
+      await register(username, email, password, verificationCode);
       setSuccessMessage('注册成功！即将跳转到登录页面...');
       // 注册成功后重定向到登录页
       setTimeout(() => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      setError('注册失败，请稍后重试');
+      setError('注册失败，验证码错误或已过期，请重试');
       console.error('Registration error:', err);
     } finally {
       setIsLoading(false);
@@ -119,6 +169,34 @@ const RegisterPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
+              
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', marginTop: 2 }}>
+                <TextField
+                  variant="outlined"
+                  required
+                  fullWidth
+                  label="验证码"
+                  name="verificationCode"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  inputProps={{ maxLength: 6 }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={handleSendVerificationCode}
+                  disabled={isSendingCode || countdown > 0 || !email}
+                  sx={{ height: 56, whiteSpace: 'nowrap' }}
+                >
+                  {isSendingCode ? '发送中...' : 
+                   countdown > 0 ? `重新发送(${countdown}s)` : '发送验证码'}
+                </Button>
+              </Box>
+              
+              {codeSent && (
+                <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
+                  验证码已发送至您的邮箱，请查收
+                </Typography>
+              )}
               
               <TextField
                 variant="outlined"

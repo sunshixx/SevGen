@@ -1,7 +1,10 @@
 package com.aichat.roleplay.controller;
 
+import com.aichat.roleplay.common.ApiResponse;
 import com.aichat.roleplay.context.UserContext;
+import com.aichat.roleplay.dto.ChatSessionVO;
 import com.aichat.roleplay.model.User;
+import com.aichat.roleplay.service.IChatService;
 import com.aichat.roleplay.service.SseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +16,8 @@ public class SseController {
 
     @Autowired
     private SseService sseService;
+    @Autowired
+    private IChatService chatService;
 
     /**
      * 建立SSE连接，订阅特定聊天的实时消息
@@ -31,4 +36,9 @@ public class SseController {
         // 创建SSE连接并返回发射器
         return sseService.createConnection(currentUser.getUsername(), chatId);
     }
+//    @GetMapping("/create")
+//    public ApiResponse<ChatSessionVO > create(@PathVariable String  query) {
+//        ChatSessionVO chatSessionVO = chatService.create(query);
+//        return ApiResponse.success(chatSessionVO);
+//    }
 }

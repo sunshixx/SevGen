@@ -4,7 +4,7 @@ class AuthService {
   // 用户登录
   async login(username, password) {
     try {
-      const response = await api.post('/auth/login', { username, password });
+      const response = await api.post('/api/auth/login', { username, password });
       if (response.token) {
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
@@ -16,10 +16,26 @@ class AuthService {
     }
   }
 
-  // 用户注册
-  async register(username, email, password) {
+  // 发送验证码
+  async sendVerificationCode(email) {
     try {
-      const response = await api.post('/auth/register', { username, email, password });
+      const response = await api.post('/api/auth/send-verification-code', { email });
+      return response;
+    } catch (error) {
+      console.error('Failed to send verification code:', error);
+      throw error;
+    }
+  }
+
+  // 用户注册（带验证码）
+  async register(username, email, password, verificationCode) {
+    try {
+      const response = await api.post('/api/auth/register', { 
+        username, 
+        email, 
+        password, 
+        verificationCode 
+      });
       return response;
     } catch (error) {
       console.error('Registration failed:', error);
@@ -30,7 +46,7 @@ class AuthService {
   // 获取当前登录用户信息
   async getCurrentUser() {
     try {
-      const response = await api.get('/auth/me');
+      const response = await api.get('/api/auth/me');
       return response;
     } catch (error) {
       console.error('Failed to get current user:', error);
