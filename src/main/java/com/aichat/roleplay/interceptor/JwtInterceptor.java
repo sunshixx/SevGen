@@ -67,6 +67,13 @@ public class JwtInterceptor implements HandlerInterceptor {
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
+        
+        // 如果没有从Authorization头获取到，尝试从URL参数获取（用于SSE连接）
+        String tokenFromParam = request.getParameter("token");
+        if (tokenFromParam != null && !tokenFromParam.isEmpty()) {
+            return tokenFromParam;
+        }
+        
         return null;
     }
 }

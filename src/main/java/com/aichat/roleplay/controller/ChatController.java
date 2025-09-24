@@ -17,8 +17,7 @@ import java.util.List;
 
 /**
  * 聊天会话控制器
- * 遵循SOLID原则中的单一职责原则和依赖倒置原则
- * 使用统一的API响应格式和异常处理
+ * 提供聊天会话的创建、管理功能
  */
 @RestController
 @RequestMapping("/api/chats")
@@ -62,8 +61,6 @@ public class ChatController {
 
     /**
      * 获取用户的所有聊天会话
-     *
-     * @return 聊天会话列表
      */
     @GetMapping
     public ApiResponse<List<Chat>> getUserChats() {
@@ -82,8 +79,6 @@ public class ChatController {
 
     /**
      * 获取用户的活跃聊天会话
-     *
-     * @return 活跃聊天会话列表
      */
     @GetMapping("/active")
     public ApiResponse<List<Chat>> getUserActiveChats() {
@@ -102,9 +97,6 @@ public class ChatController {
 
     /**
      * 根据ID获取聊天会话详情
-     *
-     * @param id 聊天会话ID
-     * @return 聊天会话详情
      */
     @GetMapping("/{id}")
     public ApiResponse<Chat> getChatById(@PathVariable Long id) {
@@ -130,10 +122,6 @@ public class ChatController {
 
     /**
      * 更新聊天会话
-     *
-     * @param id   聊天会话ID
-     * @param chat 聊天会话信息
-     * @return 更新后的聊天会话
      */
     @PutMapping("/{id}")
     public ApiResponse<Chat> updateChat(@PathVariable Long id,
@@ -165,9 +153,6 @@ public class ChatController {
 
     /**
      * 停用聊天会话
-     *
-     * @param id 聊天会话ID
-     * @return 操作结果
      */
     @PutMapping("/{id}/deactivate")
     public ApiResponse<String> deactivateChat(@PathVariable Long id) {
@@ -175,8 +160,6 @@ public class ChatController {
 
         try {
             User user = getCurrentUser();
-
-            // 验证聊天会话存在性和所有权
             Chat chat = chatService.getChatById(id)
                     .orElseThrow(() -> new RuntimeException("聊天会话不存在"));
 
@@ -195,9 +178,6 @@ public class ChatController {
 
     /**
      * 删除聊天会话
-     *
-     * @param id 聊天会话ID
-     * @return 操作结果
      */
     @DeleteMapping("/{id}")
     public ApiResponse<String> deleteChat(@PathVariable Long id) {
@@ -205,8 +185,6 @@ public class ChatController {
 
         try {
             User user = getCurrentUser();
-
-            // 验证聊天会话存在性和所有权
             Chat chat = chatService.getChatById(id)
                     .orElseThrow(() -> new RuntimeException("聊天会话不存在"));
 
@@ -225,9 +203,6 @@ public class ChatController {
 
     /**
      * 获取当前登录用户
-     * 从ThreadLocal用户上下文中获取
-     *
-     * @return 用户信息
      */
     private User getCurrentUser() {
         User user = UserContext.getCurrentUser();

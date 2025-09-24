@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotNull;
 
 /**
  * 发送消息请求DTO
- * 遵循SOLID原则中的单一职责原则
  */
 public class SendMessageRequest {
 

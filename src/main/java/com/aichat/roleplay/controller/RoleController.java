@@ -1,13 +1,12 @@
 package com.aichat.roleplay.controller;
 
+import com.aichat.roleplay.common.ApiResponse;
 import com.aichat.roleplay.model.Role;
 import com.aichat.roleplay.service.IRoleService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/roles")
@@ -17,53 +16,53 @@ public class RoleController {
     private IRoleService roleService;
 
     @GetMapping
-    public ResponseEntity<?> getAllPublicRoles() {
+    public ApiResponse<?> getAllPublicRoles() {
         List<Role> roles = roleService.getAllPublicRoles();
-        return ResponseEntity.ok(roles);
+        return ApiResponse.success("获取角色列表成功", roles);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchRoles(@RequestParam String query) {
+    public ApiResponse<?> searchRoles(@RequestParam String query) {
         List<Role> roles = roleService.searchRoles(query);
-        return ResponseEntity.ok(roles);
+        return ApiResponse.success("搜索角色成功", roles);
     }
 
     @GetMapping("/category/{category}")
-    public ResponseEntity<?> getRolesByCategory(@PathVariable String category) {
+    public ApiResponse<?> getRolesByCategory(@PathVariable String category) {
         List<Role> roles = roleService.getRolesByCategory(category);
-        return ResponseEntity.ok(roles);
+        return ApiResponse.success("获取分类角色成功", roles);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getRoleById(@PathVariable Long id) {
+    public ApiResponse<?> getRoleById(@PathVariable Long id) {
         Role role = roleService.getRoleById(id)
                 .orElseThrow(() -> new RuntimeException("Role not found"));
-        return ResponseEntity.ok(role);
+        return ApiResponse.success("获取角色详情成功", role);
     }
 
     @GetMapping("/name/{name}")
-    public ResponseEntity<?> getRoleByName(@PathVariable String name) {
+    public ApiResponse<?> getRoleByName(@PathVariable String name) {
         Role role = roleService.getRoleByName(name)
                 .orElseThrow(() -> new RuntimeException("Role not found"));
-        return ResponseEntity.ok(role);
+        return ApiResponse.success("获取角色详情成功", role);
     }
 
     @PostMapping
-    public ResponseEntity<?> createRole(@RequestBody Role role) {
+    public ApiResponse<?> createRole(@RequestBody Role role) {
         Role createdRole = roleService.createRole(role);
-        return ResponseEntity.ok(createdRole);
+        return ApiResponse.success("创建角色成功", createdRole);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateRole(@PathVariable Long id, @RequestBody Role role) {
+    public ApiResponse<?> updateRole(@PathVariable Long id, @RequestBody Role role) {
         role.setId(id);
         Role updatedRole = roleService.updateRole(role);
-        return ResponseEntity.ok(updatedRole);
+        return ApiResponse.success("更新角色成功", updatedRole);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteRole(@PathVariable Long id) {
+    public ApiResponse<?> deleteRole(@PathVariable Long id) {
         roleService.deleteRole(id);
-        return ResponseEntity.ok(Map.of("message", "Role deleted successfully"));
+        return ApiResponse.success("删除角色成功");
     }
 }
