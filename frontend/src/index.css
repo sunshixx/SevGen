@@ -1,0 +1,67 @@
+/* 基础全局设置 */
+:root {
+  /* 主要颜色变量 */
+  --primary-color: #3f51b5;
+  --primary-dark: #303f9f;
+  --primary-light: #c5cae9;
+  --secondary-color: #ff4081;
+  --error-color: #f44336;
+  --success-color: #4caf50;
+  --warning-color: #ff9800;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --background-color: #f5f5f5;
+  --surface-color: #ffffff;
+  --border-color: #e0e0e0;
+  
+  /* 字体设置 */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  
+  /* 字体渲染优化 */
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 确保body和html占满整个视口 */
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* 移除默认的focus outline，由自定义样式替代 */
+*:focus {
+  outline: none;
+}
+
+/* 确保图片响应式 */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 确保表单元素使用相同的字体 */
+input, button, textarea, select {
+  font-family: inherit;
+}
+
+/* 平滑滚动 */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 禁用文本选择（可根据需要在特定元素上启用） */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
