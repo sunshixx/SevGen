@@ -1,6 +1,7 @@
 package com.aichat.roleplay.controller;
 
 import com.aichat.roleplay.common.ApiResponse;
+import com.aichat.roleplay.common.PagedResponse;
 import com.aichat.roleplay.context.UserContext;
 import com.aichat.roleplay.dto.SendMessageRequest;
 import com.aichat.roleplay.mapper.ChatMapper;
@@ -72,6 +73,40 @@ public class MessageController {
             messageMapper.markAllAsReadByChatId(chatId);
 
             return ApiResponse.success("获取聊天消息成功", messages);
+
+        } catch (Exception e) {
+            log.error("获取聊天消息失败", e);
+            return ApiResponse.error("获取聊天消息失败: " + e.getMessage());
+        }
+    }
+    /**
+     * 分页获取聊天消息列表
+     */
+    @GetMapping("/chat/{chatId}/messages")
+    public ApiResponse<PagedResponse<Message>> getChatMessages(
+            @PathVariable Long chatId,
+            @RequestParam(required = false) Long lastMessageId,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        log.debug("获取聊天消息，聊天ID: {}, lastMessageId: {}, pageSize: {}", chatId, lastMessageId, pageSize);
+
+        try {
+            User user = getCurrentUser();
+
+            // 验证聊天会话权限
+            validateChatAccess(chatId, user.getId());
+
+            // 获取分页消息列表
+            List<Message> messages = messageMapper.findByChatIdPage(chatId, lastMessageId, pageSize);
+
+            // 标记消息为已读（仅当前用户）
+            messageMapper.markAllAsReadByChatId(chatId);
+
+            // 构造分页响应
+            Long nextCursor = messages.isEmpty() ? null : messages.get(messages.size() - 1).getId();
+            boolean hasMore = messages.size() == pageSize;
+
+            PagedResponse<Message> response = new PagedResponse<>(messages, nextCursor, hasMore);
+            return ApiResponse.success("获取聊天消息成功", response);
 
         } catch (Exception e) {
             log.error("获取聊天消息失败", e);
@@ -172,50 +207,6 @@ public class MessageController {
         }
     }
 
-    /**
-     * 生成AI回复
-     */
-    private Message generateAiResponse(Chat chat, String userMessage, Long userMessageId) {
-        // 获取角色信息
-        Role role = roleMapper.selectById(chat.getRoleId());
-        if (role == null) {
-            throw new RuntimeException("角色不存在");
-        }
-
-        // 获取聊天历史（最近10条消息）
-        List<Message> recentMessages = messageMapper.findByChatId(chat.getId());
-        StringBuilder chatHistory = new StringBuilder();
-
-        for (int i = Math.max(0, recentMessages.size() - 10); i < recentMessages.size(); i++) {
-            Message msg = recentMessages.get(i);
-            if (!msg.getId().equals(userMessageId)) { // 排除当前用户消息
-                chatHistory.append(msg.getSenderType()).append(": ").append(msg.getContent()).append("\n");
-            }
-        }
-
-        // 调用AI服务生成回复
-        String aiResponse = aiChatService.generateCharacterResponse(
-                role.getName(),
-                role.getCharacterPrompt(),
-                userMessage
-        );
-
-        // 保存AI回复
-        Message aiMessage = Message.builder()
-                .chatId(chat.getId())
-                .senderType("ai")
-                .content(aiResponse)
-                .isRead(false)
-                .deleted(0)
-                .build();
-
-        int result = messageMapper.insert(aiMessage);
-        if (result > 0) {
-            return aiMessage;
-        } else {
-            throw new RuntimeException("保存AI回复失败");
-        }
-    }
 
     /**
      * 创建错误消息

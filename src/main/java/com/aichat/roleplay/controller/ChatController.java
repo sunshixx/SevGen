@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -73,6 +74,23 @@ public class ChatController {
             List<ChatVO> chatsVO = ChatVO.po2voList(chats);
             return ApiResponse.success("获取聊天会话列表成功", chatsVO);
 
+        } catch (Exception e) {
+            log.error("获取聊天会话列表失败", e);
+            return ApiResponse.error("获取聊天会话列表失败: " + e.getMessage());
+        }
+    }
+    @GetMapping("/list")
+    public ApiResponse<List<ChatVO>> getUserChats(
+            @RequestParam(required = false) LocalDateTime lastUpdatedAt,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        User user = getCurrentUser();
+        log.debug("获取用户聊天会话列表，用户: {}, lastUpdatedAt: {}, pageSize: {}",
+                user.getUsername(), lastUpdatedAt, pageSize);
+
+        try {
+            List<Chat> chats = chatService.getUserChats(user.getId(), lastUpdatedAt, pageSize);
+            List<ChatVO> chatsVO = ChatVO.po2voList(chats);
+            return ApiResponse.success("获取聊天会话列表成功", chatsVO);
         } catch (Exception e) {
             log.error("获取聊天会话列表失败", e);
             return ApiResponse.error("获取聊天会话列表失败: " + e.getMessage());

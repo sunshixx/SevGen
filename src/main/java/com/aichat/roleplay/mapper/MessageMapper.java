@@ -27,6 +27,27 @@ public interface MessageMapper extends BaseMapper<Message> {
     List<Message> findByChatId(@Param("chatId") Long chatId);
 
     /**
+     * 分页查询聊天会话的消息
+     *
+     * @param chatId       聊天会话ID
+     * @param lastMessageId 最后一条消息ID
+     * @param pageSize     每页数量
+     * @return 消息列表
+     */
+    @Select("""
+    SELECT * FROM messages
+    WHERE chat_id = #{chatId}
+      <if test="lastMessageId != null">
+        AND id < #{lastMessageId}
+      </if>
+    ORDER BY id DESC
+    LIMIT #{pageSize}
+""")
+    List<Message> findByChatIdPage(@Param("chatId") Long chatId,
+                                   @Param("lastMessageId") Long lastMessageId,
+                                   @Param("pageSize") int pageSize);
+
+    /**
      * 查询聊天会话的未读消息
      *
      * @param chatId 聊天会话ID

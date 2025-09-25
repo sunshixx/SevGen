@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -73,6 +74,10 @@ public class ChatServiceImpl implements IChatService {
     public List<Chat> getUserChats(Long userId) {
         log.debug("获取用户所有聊天会话，用户ID: {}", userId);
         return chatMapper.findByUserId(userId);
+    }
+    public List<Chat> getUserChats(Long userId, LocalDateTime lastUpdatedAt, int pageSize) {
+        log.debug("分页获取用户聊天会话，用户ID: {}, lastUpdatedAt: {}, pageSize: {}", userId, lastUpdatedAt, pageSize);
+        return chatMapper.findByUserIdPage(userId, lastUpdatedAt, pageSize);
     }
 
     @Override
