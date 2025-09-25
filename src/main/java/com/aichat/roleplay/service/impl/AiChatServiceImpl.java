@@ -5,7 +5,6 @@ import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.StreamingResponseHandler;
-import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.output.Response;
 import org.slf4j.Logger;
@@ -99,20 +98,20 @@ public class AiChatServiceImpl implements IAiChatService {
     public void generateStreamResponse(String rolePrompt, String userMessage, StreamResponseCallback callback) {
         log.debug("开始流式生成AI回复");
 
+        StringBuilder aiAnswer = new StringBuilder();
+
         try {
-            // 构建提示词
             String fullPrompt = buildRolePrompt(rolePrompt, userMessage, null);
 
-            // 准备消息（最简单只用 user message）
             List<ChatMessage> messages = List.of(
                     UserMessage.from(fullPrompt)
             );
 
-            // 调用流式 API
             streamingChatLanguageModel.generate(messages, new StreamingResponseHandler<AiMessage>() {
                 @Override
                 public void onNext(String token) {
-                    callback.onResponse(token);
+                    aiAnswer.append(token);
+                    callback.onResponse(token); // 逐 token 回推给 SSE
                 }
 
                 @Override
@@ -123,12 +122,17 @@ public class AiChatServiceImpl implements IAiChatService {
 
                 @Override
                 public void onComplete(Response<AiMessage> response) {
-                    if (response != null && response.content() != null) {
-                        String finalText = response.content().text();
-                        // 你可以在这里保存 finalText 到数据库
-                    } else {
-                        log.warn("流式回复完成，但 response 为空或无内容");
+                    // 不依赖 response，直接用 aiAnswer
+                    String finalAnswer = aiAnswer.toString();
+                    log.debug("流式回复完成，长度: {}", finalAnswer.length());
+
+                    if (response == null || response.content() == null) {
+                        log.warn("onComplete 收到空的 response");
                     }
+
+                    // 持久化到数据库可以在这里做
+                    // messageRepository.save(new Message(chatId, roleId, "ai", finalAnswer));
+
                     callback.onResponse("[DONE]");
                 }
             });
@@ -138,22 +142,5 @@ public class AiChatServiceImpl implements IAiChatService {
             callback.onResponse("[ERROR]");
         }
     }
-//    private String buildRolePrompt(String rolePrompt, String userMessage, String chatHistory) {
-//        StringBuilder promptBuilder = new StringBuilder();
-//
-//        if (rolePrompt != null && !rolePrompt.isEmpty()) {
-//            promptBuilder.append("你是一个AI角色扮演助手。请严格按照以下角色设定进行回复：\n");
-//            promptBuilder.append(rolePrompt).append("\n\n");
-//        }
-//
-//        if (chatHistory != null && !chatHistory.isEmpty()) {
-//            promptBuilder.append("聊天历史：\n");
-//            promptBuilder.append(chatHistory).append("\n\n");
-//        }
-//
-//        promptBuilder.append("用户说：").append(userMessage).append("\n\n");
-//        promptBuilder.append("请以角色的身份回复（不要说你是AI或角色扮演，直接以角色身份回应）：");
-//
-//        return promptBuilder.toString();
-//    }
+
 }

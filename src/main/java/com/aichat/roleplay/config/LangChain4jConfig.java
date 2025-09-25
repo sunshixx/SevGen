@@ -1,5 +1,6 @@
 package com.aichat.roleplay.config;
 
+
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
@@ -45,4 +46,5 @@ public class LangChain4jConfig {
                 .timeout(Duration.ofSeconds(60))
                 .build();
     }
+
 }
