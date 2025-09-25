@@ -6,7 +6,6 @@ import com.aichat.roleplay.dto.CreateChatRequest;
 import com.aichat.roleplay.model.Chat;
 import com.aichat.roleplay.model.User;
 import com.aichat.roleplay.service.IChatService;
-import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,12 +20,12 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/chats")
-@AllArgsConstructor
 public class ChatController {
 
     private static final Logger log = LoggerFactory.getLogger(ChatController.class);
 
-    private final IChatService chatService;
+    @Autowired
+    private IChatService chatService;
 
 //    @Autowired
 //    public ChatController(IChatService chatService) {

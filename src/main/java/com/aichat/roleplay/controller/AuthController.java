@@ -10,9 +10,9 @@ import com.aichat.roleplay.model.User;
 import com.aichat.roleplay.service.IUserService;
 import com.aichat.roleplay.util.JwtUtil;
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -22,13 +22,15 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/auth")
-@AllArgsConstructor
 public class AuthController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
-    private final IUserService userService;
-    private final JwtUtil jwtUtil;
+    @Autowired
+    private IUserService userService;
+    
+    @Autowired
+    private JwtUtil jwtUtil;
 
     /**
      * 用户登录
