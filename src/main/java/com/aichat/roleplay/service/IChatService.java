@@ -2,6 +2,7 @@ package com.aichat.roleplay.service;
 
 import com.aichat.roleplay.model.Chat;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +20,11 @@ public interface IChatService {
      * 获取用户的所有聊天会话
      */
     List<Chat> getUserChats(Long userId);
+
+    /**
+     * 获取用户最新的聊天会话
+     */
+    List<Chat> getUserChats(Long userId, LocalDateTime lastUpdatedAt, int pageSize);
 
     /**
      * 获取用户的活跃聊天会话
