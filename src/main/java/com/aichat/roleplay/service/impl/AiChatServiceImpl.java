@@ -90,6 +90,11 @@ public class AiChatServiceImpl implements IAiChatService {
 
 
     @Override
+    public String generateRoleResponse(String rolePrompt, String userMessage, String chatHistory) {
+        return "";
+    }
+
+    @Override
     public String generateCharacterResponse(String roleName, String characterPrompt, String userMessage) {
         return "";
     }
