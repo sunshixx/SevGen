@@ -34,16 +34,18 @@ public interface ChatMapper extends BaseMapper<Chat> {
      * @param pageSize     每页大小
      * @return 聊天会话列表
      */
-    @Select("""
-    SELECT * FROM chats
-    WHERE user_id = #{userId} 
-      AND deleted = 0
-      <if test="lastUpdatedAt != null">
-        AND updated_at &lt; #{lastUpdatedAt}
-      </if>
-    ORDER BY updated_at DESC
-    LIMIT #{pageSize}
-""")
+    @Select({
+        "<script>",
+        "SELECT * FROM chats",
+        "WHERE user_id = #{userId}",
+        "AND deleted = 0",
+        "<if test='lastUpdatedAt != null'>",
+        "AND updated_at &lt; #{lastUpdatedAt}",
+        "</if>",
+        "ORDER BY updated_at DESC",
+        "LIMIT #{pageSize}",
+        "</script>"
+    })
     List<Chat> findByUserIdPage(@Param("userId") Long userId,
                                 @Param("lastUpdatedAt") LocalDateTime lastUpdatedAt,
                                 @Param("pageSize") int pageSize);

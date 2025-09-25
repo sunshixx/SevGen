@@ -60,12 +60,16 @@ request.interceptors.response.use(
       // 处理业务逻辑错误
       if (!success) {
         const errorMessage = data.message || '请求失败'
-        ElMessage.error(errorMessage)
         
-        // 401错误跳转到登录页
+        // 只在非静默请求时显示错误消息
+        if (!response.config.headers['X-Silent-Request']) {
+          ElMessage.error(errorMessage)
+        }
+        
+        // 401错误时不立即跳转，让调用方处理
         if (data.code === 401) {
-          localStorage.removeItem('token')
-          window.location.href = '/login'
+          console.log('[Auth Error] 401错误，由调用方处理')
+          // 不在这里清除token和跳转，让具体的业务逻辑处理
         }
         
         return Promise.reject(new Error(errorMessage))
@@ -83,12 +87,15 @@ request.interceptors.response.use(
       // 处理业务逻辑错误
       if (data.success === false) {
         const errorMessage = data.message || '请求失败'
-        ElMessage.error(errorMessage)
         
-        // 401错误跳转到登录页  
+        // 只在非静默请求时显示错误消息
+        if (!response.config.headers['X-Silent-Request']) {
+          ElMessage.error(errorMessage)
+        }
+        
+        // 401错误时不立即跳转，让调用方处理
         if (data.code === 401) {
-          localStorage.removeItem('token')
-          window.location.href = '/login'
+          console.log('[Auth Error] 401错误，由调用方处理')
         }
         
         return Promise.reject(new Error(errorMessage))

@@ -6,6 +6,13 @@ export interface ApiResponse<T = any> {
   code?: number
 }
 
+// 分页响应结构
+export interface PagedResponse<T> {
+  data: T[]
+  nextCursor?: number | string | null
+  hasMore: boolean
+}
+
 // 用户相关类型
 export interface User {
   id: number

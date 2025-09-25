@@ -23,6 +23,7 @@
         <div class="side-card-content">
           <div class="chat-title">{{ getRoleName(chat.roleId) }}</div>
           <div v-if="getSafeRoleDescription(chat.roleId)" class="chat-description">{{ getSafeRoleDescription(chat.roleId) }}</div>
+          <div class="chat-time">{{ formatRelativeTime(chat.updateTime) }}</div>
         </div>
       </div>
     </div>
@@ -53,21 +54,28 @@
         
         <!-- 消息显示区域 -->
         <div class="messages-container" ref="messagesContainer">
-          <div 
-            v-for="message in activeMessages" 
-            :key="message.id"
-            class="message-item"
-            :class="{ 'user': message.senderType === 'user', 'ai': message.senderType === 'ai' }"
-          >
-            <div class="message-avatar">
-              <span v-if="message.senderType === 'user'">你</span>
-              <span v-else>{{ getRoleName(activeChat.roleId)[0] }}</span>
+          <template v-for="(message, index) in activeMessages" :key="message.id">
+            <!-- 时间分隔符 -->
+            <div 
+              v-if="index === 0 || shouldShowTimeLabel(activeMessages[index - 1]?.sentAt, message.sentAt)"
+              class="message-time-divider"
+            >
+              {{ formatMessageTime(message.sentAt) }}
             </div>
             
-            <!-- 文本消息 -->
-            <div v-if="message.messageType === 'text' || !message.messageType" class="message-content text-message">
-              {{ message.content }}
-            </div>
+            <div 
+              class="message-item"
+              :class="{ 'user': message.senderType === 'user', 'ai': message.senderType === 'ai' }"
+            >
+              <div class="message-avatar">
+                <span v-if="message.senderType === 'user'">你</span>
+                <span v-else>{{ getRoleName(activeChat.roleId)[0] }}</span>
+              </div>
+              
+              <!-- 文本消息 -->
+              <div v-if="message.messageType === 'text' || !message.messageType" class="message-content text-message">
+                {{ message.content }}
+              </div>
             
             <!-- 语音消息 -->
             <div v-else-if="message.messageType === 'voice'" class="message-content voice-message">
@@ -127,7 +135,8 @@
                 </div>
               </div>
             </div>
-          </div>
+            </div>
+          </template>
           
           <!-- AI思考状态 -->
           <div v-if="isAiReplying" class="thinking-indicator">
@@ -202,6 +211,7 @@
         <div class="side-card-content">
           <div class="chat-title">{{ getRoleName(chat.roleId) }}</div>
           <div v-if="getSafeRoleDescription(chat.roleId)" class="chat-description">{{ getSafeRoleDescription(chat.roleId) }}</div>
+          <div class="chat-time">{{ formatRelativeTime(chat.updateTime) }}</div>
         </div>
       </div>
     </div>
@@ -215,6 +225,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { chatAPI, messageAPI, roleAPI } from '@/api'
 import { SSEConnection } from '@/api/message'
 import type { Chat, Message, Role } from '@/types'
+import { formatRelativeTime, formatMessageTime, shouldShowTimeLabel } from '@/utils/dateUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -950,8 +961,8 @@ const deleteChat = async (chatId: number) => {
 const loadChatList = async () => {
   try {
     console.log('开始加载聊天列表...')
-    // 先尝试获取用户已有的聊天
-    const response = await chatAPI.getUserChats()
+    // 先尝试获取用户已有的聊天（使用分页接口，pageSize设大一些获取所有聊天）
+    const response = await chatAPI.getUserChats(undefined, 100)  // 获取前100个聊天
     console.log('聊天列表API响应:', response)
     
     if (response.success && response.data && response.data.length > 0) {
@@ -1128,13 +1139,14 @@ const loadMessages = async (chatId: number) => {
   if (!chatId) return
   
   try {
-    // 从API获取聊天消息
-    const response = await messageAPI.getChatMessages(chatId)
+    // 从API获取聊天消息（使用分页接口，pageSize设大一些获取所有消息）
+    const response = await messageAPI.getChatMessages(chatId, undefined, 100)  // 获取前100条消息
     if (response.success && response.data) {
-      allMessages.value.set(chatId, response.data)
+      const messages = response.data.data || []  // 从分页响应中取出消息数组
+      allMessages.value.set(chatId, messages)
       
       // 预加载语音消息的音频元数据
-      response.data.forEach((message: Message) => {
+      messages.forEach((message: Message) => {
         if (message.messageType === 'voice' && message.audioUrl) {
           preloadVoiceMessage(message.id, message.audioUrl, message.audioDuration || 0)
         }
@@ -1233,15 +1245,16 @@ watch(activeChatId, (newChatId) => {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   overflow: hidden;
+  font-size: clamp(12px, 1vw, 16px); /* 动态字体大小 */
 }
 
 /* 侧边栏通用样式 */
 .side-column {
-  width: 300px;
-  padding: 20px;
+  width: clamp(250px, 20vw, 320px); /* 响应式宽度 */
+  padding: clamp(15px, 1.5vw, 25px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: clamp(12px, 1.2vw, 18px);
   overflow-y: auto;
 }
 
@@ -1258,11 +1271,11 @@ watch(activeChatId, (newChatId) => {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: clamp(12px, 1.2vw, 18px);
+  padding: clamp(12px, 1.2vw, 18px);
   cursor: pointer;
   transition: all 0.3s ease;
-  min-height: 120px;
+  min-height: clamp(100px, 8vw, 130px);
 }
 
 .side-chat-card:hover {
@@ -1275,35 +1288,42 @@ watch(activeChatId, (newChatId) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: clamp(8px, 0.8vw, 14px);
 }
 
 .side-card-content {
   flex: 1;
-
 }
 
 .side-card-content .chat-title {
-  font-size: 14px;
+  font-size: clamp(13px, 1.1vw, 15px);
   font-weight: 600;
   color: white;
-  margin-bottom: 6px;
+  margin-bottom: clamp(4px, 0.4vw, 8px);
 }
 
 .side-card-content .chat-description {
-  font-size: 12px;
+  font-size: clamp(11px, 0.9vw, 13px);
   color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 8px;
+  margin-bottom: clamp(6px, 0.6vw, 10px);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  min-height: 0; /* 允许空内容时不占用高度 */
+  min-height: 0;
 }
 
 .side-card-content .chat-description:empty {
   display: none; /* 完全隐藏空的描述元素 */
+}
+
+.side-card-content .chat-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+  text-align: right;
+  font-weight: 400;
 }
 
 /* 中间活跃区域 */
@@ -1377,24 +1397,57 @@ watch(activeChatId, (newChatId) => {
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  margin-bottom: 20px;
-  padding: 10px 0;
+  margin-bottom: clamp(16px, 1.6vw, 24px);
+  padding: clamp(8px, 0.8vw, 12px) 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: clamp(12px, 1.2vw, 20px);
+}
+
+/* 消息时间分隔符 */
+.message-time-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: clamp(12px, 1.2vw, 20px) 0 clamp(6px, 0.6vw, 10px);
+  position: relative;
+}
+
+.message-time-divider::before {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin-right: clamp(8px, 0.8vw, 14px);
+}
+
+.message-time-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin-left: clamp(8px, 0.8vw, 14px);
+}
+
+.message-time-divider {
+  font-size: clamp(10px, 0.9vw, 13px);
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.1);
+  padding: clamp(3px, 0.3vw, 5px) clamp(8px, 0.8vw, 14px);
+  border-radius: clamp(10px, 1vw, 16px);
+  align-self: center;
+  backdrop-filter: blur(5px);
 }
 
 .message-item {
   display: flex;
-  gap: 12px;
+  gap: clamp(8px, 0.8vw, 14px);
   align-items: flex-start;
-
 }
 
 .message-item.ai {
   align-self: flex-start;
 }
-
 
 .message-item.user {
   align-self: flex-end;
@@ -1402,14 +1455,14 @@ watch(activeChatId, (newChatId) => {
 }
 
 .message-avatar {
-  width: 36px;
-  height: 36px;
+  width: clamp(32px, 2.8vw, 40px);
+  height: clamp(32px, 2.8vw, 40px);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: clamp(10px, 0.9vw, 13px);
   font-weight: 600;
   color: white;
   flex-shrink: 0;
@@ -1418,12 +1471,12 @@ watch(activeChatId, (newChatId) => {
 .message-content {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
-  padding: 12px 16px;
-  border-radius: 16px;
+  padding: clamp(8px, 0.8vw, 14px) clamp(12px, 1.2vw, 18px);
+  border-radius: clamp(12px, 1.2vw, 20px);
   color: white;
-  font-size: 14px;
+  font-size: clamp(12px, 1.1vw, 15px);
   line-height: 1.5;
-  max-width: 70%;
+  max-width: min(70%, 600px);
   word-wrap: break-word;
 }
 
@@ -1434,7 +1487,7 @@ watch(activeChatId, (newChatId) => {
 /* 输入容器 */
 .input-container {
   display: flex;
-  gap: 12px;
+  gap: clamp(8px, 0.8vw, 14px);
   align-items: center;
 }
 
@@ -1443,13 +1496,12 @@ watch(activeChatId, (newChatId) => {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  padding: 12px 16px;
+  border-radius: clamp(12px, 1.2vw, 18px);
+  padding: clamp(8px, 0.8vw, 14px) clamp(12px, 1.2vw, 18px);
   color: white;
-  font-size: 14px;
+  font-size: clamp(12px, 1.1vw, 15px);
   outline: none;
   transition: all 0.3s ease;
-
 }
 
 .message-input::placeholder {
@@ -1463,8 +1515,8 @@ watch(activeChatId, (newChatId) => {
 
 
 .send-btn, .voice-btn {
-  width: 44px;
-  height: 44px;
+  width: clamp(40px, 3.2vw, 48px);
+  height: clamp(40px, 3.2vw, 48px);
   background: linear-gradient(135deg, #667eea, #764ba2);
   border: none;
   border-radius: 50%;
@@ -1622,21 +1674,21 @@ watch(activeChatId, (newChatId) => {
 }
 
 .voice-message-container {
-  min-width: 180px;
-  max-width: 280px;
-  padding: 4px;
+  min-width: clamp(160px, 20vw, 200px);
+  max-width: clamp(240px, 30vw, 320px);
+  padding: clamp(3px, 0.3vw, 5px);
 }
 
 .voice-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: clamp(6px, 0.6vw, 10px);
+  margin-bottom: clamp(4px, 0.4vw, 8px);
 }
 
 .play-btn {
-  width: 32px;
-  height: 32px;
+  width: clamp(28px, 2.4vw, 36px);
+  height: clamp(28px, 2.4vw, 36px);
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.15);
@@ -1678,9 +1730,9 @@ watch(activeChatId, (newChatId) => {
 }
 
 .voice-duration {
-  font-size: 11px;
+  font-size: clamp(9px, 0.9vw, 12px);
   color: rgba(255, 255, 255, 0.6);
-  min-width: 45px;
+  min-width: clamp(40px, 4vw, 50px);
   text-align: right;
   flex-shrink: 0;
   font-family: 'Times New Roman', serif;
@@ -1689,9 +1741,9 @@ watch(activeChatId, (newChatId) => {
 }
 
 .transcript-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
+  width: clamp(20px, 2vw, 26px);
+  height: clamp(20px, 2vw, 26px);
+  border-radius: clamp(3px, 0.3vw, 5px);
   border: none;
   background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.6);
@@ -1710,12 +1762,12 @@ watch(activeChatId, (newChatId) => {
 }
 
 .voice-transcript {
-  margin-top: 8px;
-  padding: 8px 10px;
+  margin-top: clamp(6px, 0.6vw, 10px);
+  padding: clamp(6px, 0.6vw, 10px) clamp(8px, 0.8vw, 12px);
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  border-left: 3px solid rgba(124, 58, 237, 0.6);
-  font-size: 13px;
+  border-radius: clamp(6px, 0.6vw, 10px);
+  border-left: clamp(2px, 0.2vw, 4px) solid rgba(124, 58, 237, 0.6);
+  font-size: clamp(11px, 1vw, 14px);
   line-height: 1.5;
   backdrop-filter: blur(4px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -1743,26 +1795,36 @@ watch(activeChatId, (newChatId) => {
 /* 转文字内容前的标签 */
 .voice-transcript:not(.ai-content)::before {
   content: "转录文字";
-  font-size: 11px;
+  font-size: clamp(9px, 0.9vw, 12px);
   color: rgba(124, 58, 237, 0.8);
   font-weight: 500;
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: clamp(2px, 0.2vw, 5px);
 }
 
 .voice-transcript.ai-content::before {
   content: "AI回复文字";
-  font-size: 11px;
+  font-size: clamp(9px, 0.9vw, 12px);
   color: rgba(59, 130, 246, 0.8);
   font-weight: 500;
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: clamp(2px, 0.2vw, 5px);
 }
 
 /* 响应式设计 */
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .side-column {
-    width: 250px;
+    width: clamp(220px, 18vw, 280px);
+  }
+}
+
+@media (max-width: 1024px) {
+  .side-column {
+    width: clamp(200px, 20vw, 250px);
+  }
+  
+  .message-content {
+    max-width: min(80%, 500px);
   }
 }
 
@@ -1773,24 +1835,29 @@ watch(activeChatId, (newChatId) => {
   
   .side-column {
     width: 100%;
-    height: 200px;
+    height: clamp(180px, 25vh, 220px);
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 16px;
+    padding: clamp(12px, 1.5vw, 18px);
   }
   
   .side-chat-card {
-    min-width: 200px;
-    margin-right: 16px;
+    min-width: clamp(180px, 40vw, 220px);
+    margin-right: clamp(12px, 1.5vw, 18px);
   }
   
   .center-column {
-    padding: 20px;
+    padding: clamp(16px, 2.5vw, 24px);
   }
   
   .active-chat-card {
-    height: 60vh;
+    height: clamp(50vh, 60vh, 70vh);
+  }
+  
+  .message-content {
+    max-width: min(90%, 400px);
+    font-size: clamp(13px, 3.5vw, 16px);
   }
 }
 </style>

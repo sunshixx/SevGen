@@ -22,7 +22,7 @@ import java.util.logging.Logger;
 
 @Service
 public class VoiceServiceImpl implements VoiceService {
-    
+
     private static final Logger logger = Logger.getLogger(VoiceServiceImpl.class.getName());
     
     @Autowired
@@ -323,7 +323,7 @@ public class VoiceServiceImpl implements VoiceService {
             
             Map<String, Object> audioParams = new HashMap<>();
             //todo 按照角色构建创建不同的音色
-            audioParams.put("voice_type", "qiniu_zh_female_wwxkjx");
+            audioParams.put("voice_type", "qiniu_zh_male_hlsnkk");
             audioParams.put("encoding", "mp3");
             audioParams.put("speed_ratio", 1.0);
             requestBody.put("audio", audioParams);

@@ -2,35 +2,18 @@ import request from '@/utils/request'
 import type { 
   ApiResponse, 
   Message, 
-  SendMessageRequest, 
-  SendMessageResponse 
+  PagedResponse 
 } from '@/types'
 
 // 消息相关API
 export const messageAPI = {
-  // 发送消息并获取AI回复 - 使用更长超时时间
-  sendMessage: (data: SendMessageRequest): Promise<ApiResponse<SendMessageResponse>> => {
-    return request.post('/messages', data, { timeout: 90000 }) // 90秒超时
-  },
-
-  // 异步发送消息
-  sendMessageAsync: (data: SendMessageRequest): Promise<ApiResponse<Message>> => {
-    return request.post('/messages/async', data, { timeout: 10000 }) // 异步接口10秒超时
-  },
-
-  // 获取聊天消息列表
-  getChatMessages: (chatId: number): Promise<ApiResponse<Message[]>> => {
-    return request.get(`/messages/chat/${chatId}`)
-  },
-
-  // 获取未读消息
-  getUnreadMessages: (chatId: number): Promise<ApiResponse<Message[]>> => {
-    return request.get(`/messages/chat/${chatId}/unread`)
-  },
-
-  // 标记消息为已读
-  markMessagesAsRead: (chatId: number): Promise<ApiResponse> => {
-    return request.put(`/messages/chat/${chatId}/read`)
+  // 分页获取聊天消息列表
+  getChatMessages: (chatId: number, lastMessageId?: number, pageSize: number = 20): Promise<ApiResponse<PagedResponse<Message>>> => {
+    const params: any = { pageSize }
+    if (lastMessageId) {
+      params.lastMessageId = lastMessageId
+    }
+    return request.get(`/messages/chat/${chatId}/messages`, { params })
   },
 
   // 创建SSE流式连接 - 基于你的SSE实现

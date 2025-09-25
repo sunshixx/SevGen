@@ -75,6 +75,9 @@ public class ChatServiceImpl implements IChatService {
         log.debug("获取用户所有聊天会话，用户ID: {}", userId);
         return chatMapper.findByUserId(userId);
     }
+    
+    @Override
+    @Transactional(readOnly = true)
     public List<Chat> getUserChats(Long userId, LocalDateTime lastUpdatedAt, int pageSize) {
         log.debug("分页获取用户聊天会话，用户ID: {}, lastUpdatedAt: {}, pageSize: {}", userId, lastUpdatedAt, pageSize);
         return chatMapper.findByUserIdPage(userId, lastUpdatedAt, pageSize);

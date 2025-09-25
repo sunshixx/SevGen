@@ -34,15 +34,18 @@ public interface MessageMapper extends BaseMapper<Message> {
      * @param pageSize     每页数量
      * @return 消息列表
      */
-    @Select("""
-    SELECT * FROM messages
-    WHERE chat_id = #{chatId}
-      <if test="lastMessageId != null">
-        AND id < #{lastMessageId}
-      </if>
-    ORDER BY id DESC
-    LIMIT #{pageSize}
-""")
+    @Select({
+        "<script>",
+        "SELECT * FROM messages",
+        "WHERE chat_id = #{chatId}",
+        "AND deleted = 0",
+        "<if test='lastMessageId != null'>",
+        "AND id &lt; #{lastMessageId}",
+        "</if>",
+        "ORDER BY id ASC",
+        "LIMIT #{pageSize}",
+        "</script>"
+    })
     List<Message> findByChatIdPage(@Param("chatId") Long chatId,
                                    @Param("lastMessageId") Long lastMessageId,
                                    @Param("pageSize") int pageSize);
