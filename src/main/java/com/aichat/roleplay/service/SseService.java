@@ -57,4 +57,7 @@ public class SseService {
             }
         }
     }
+
+    public SseEmitter stream(Long chatId, Long roleId, String userMessage) {
+    }
 }
