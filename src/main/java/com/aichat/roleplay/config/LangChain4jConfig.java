@@ -1,8 +1,6 @@
 package com.aichat.roleplay.config;
 
-import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
-import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -45,11 +43,25 @@ public class LangChain4jConfig {
                 .temperature(temperature)
                 .timeout(Duration.ofSeconds(60))
                 .build();
+    }
 
 
     @Bean
     public RestTemplate restTemplate() {
-        return new RestTemplate();
+        RestTemplate restTemplate = new RestTemplate();
+        
+        // 设置超时配置 - 语音处理需要更长的超时时间
+        restTemplate.getRequestFactory().getClass();
+        
+        // 使用SimpleClientHttpRequestFactory设置超时
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = 
+            new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        
+        factory.setConnectTimeout(10000);  // 连接超时10秒
+        factory.setReadTimeout(180000);    // 读取超时3分钟（语音处理需要更长时间）
+        
+        restTemplate.setRequestFactory(factory);
+        return restTemplate;
     }
 
 

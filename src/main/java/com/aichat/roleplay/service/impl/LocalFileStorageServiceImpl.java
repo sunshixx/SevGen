@@ -107,19 +107,14 @@ public class LocalFileStorageServiceImpl implements IFileStorageService {
     }
 
     /**
-     * 生成唯一文件名
+     * 生成唯一文件名，统一使用MP3格式
      */
     private String generateUniqueFileName(String originalFileName) {
-        String extension = getFileExtension(originalFileName);
+        String extension = ".mp3"; // 统一使用MP3格式
         String uuid = UUID.randomUUID().toString().replace("-", "");
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         
         return String.format("audio_%s_%s%s", timestamp, uuid.substring(0, 8), extension);
-    }
-
-
-    private String getFileExtension(String fileName) {
-        return ".mp3";
     }
 
     private String buildFileUrl(String fileName) {

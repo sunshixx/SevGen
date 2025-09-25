@@ -12,4 +12,14 @@ public interface VoiceService {
      * 语音对话处理 - API串接实现
      */
     byte[] processVoiceChat(MultipartFile audioFile);
+    
+    /**
+     * 语音对话处理 - API串接实现（带原始格式信息）
+     */
+    byte[] processVoiceChat(MultipartFile audioFile, String originalFormat);
+
+    /**
+     * 语音对话处理 - API串接实现（带聊天和角色信息，保存消息记录）
+     */
+    byte[] processVoiceChat(MultipartFile audioFile, Long chatId, Long roleId);
 }

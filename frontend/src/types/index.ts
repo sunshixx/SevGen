@@ -71,9 +71,13 @@ export interface CreateChatRequest {
 export interface Message {
   id: number
   chatId: number
+  roleId?: number
   senderType: 'user' | 'ai'
   content: string
+  messageType?: 'text' | 'voice'
   audioUrl?: string
+  audioDuration?: number
+  transcribedText?: string
   isRead: boolean
   sentAt?: string
 }

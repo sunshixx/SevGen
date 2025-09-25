@@ -3,7 +3,6 @@ package com.aichat.roleplay.service;
 import com.aichat.roleplay.mapper.ChatMapper;
 import com.aichat.roleplay.mapper.MessageMapper;
 import com.aichat.roleplay.mapper.RoleMapper;
-import com.aichat.roleplay.model.Chat;
 import com.aichat.roleplay.model.Message;
 import com.aichat.roleplay.model.Role;
 import jakarta.annotation.Resource;
@@ -11,21 +10,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 @Service
 public class SseService {
     @Autowired
-    private  IAiChatService aiChatService;
+    private IAiChatService aiChatService;
     @Resource
     private RoleMapper roleMapper;
     @Resource
     private ChatMapper chatMapper;
     @Resource
     private MessageMapper messageMapper;
-
 
     public SseEmitter stream(Long chatId, Long roleId, String userMessage) {
         SseEmitter emitter = new SseEmitter();
@@ -62,6 +56,5 @@ public class SseService {
         });
 
         return emitter;
-
     }
 }

@@ -168,4 +168,45 @@ public class MessageServiceImpl implements IMessageService {
         log.debug("获取最新消息，聊天ID: {}", chatId);
         return messageMapper.findLatestByChatId(chatId);
     }
+
+    @Override
+    public Message saveVoiceMessage(Long chatId, Long roleId, String senderType, String audioUrl, 
+                                  String transcribedText, Integer audioDuration) {
+        return saveVoiceMessage(chatId, roleId, senderType, transcribedText, audioUrl, transcribedText, audioDuration);
+    }
+
+    @Override
+    public Message saveVoiceMessage(Long chatId, Long roleId, String senderType, String content,
+                                  String audioUrl, String transcribedText, Integer audioDuration) {
+        log.info("保存语音消息，聊天ID: {}, 发送者: {}, 音频时长: {}秒", chatId, senderType, audioDuration);
+
+        // 验证聊天会话是否存在
+        Chat chat = chatMapper.selectById(chatId);
+        if (chat == null) {
+            throw new RuntimeException("聊天会话不存在");
+        }
+
+        // 创建语音消息
+        Message voiceMessage = Message.builder()
+                .chatId(chatId)
+                .roleId(roleId)
+                .senderType(senderType)
+                .content(content)
+                .messageType("voice")
+                .audioUrl(audioUrl)
+                .transcribedText(transcribedText)
+                .audioDuration(audioDuration)
+                .isRead(false)
+                .deleted(0)
+                .build();
+
+        // 保存语音消息
+        int result = messageMapper.insert(voiceMessage);
+        if (result > 0) {
+            log.info("语音消息保存成功，消息ID: {}", voiceMessage.getId());
+            return voiceMessage;
+        } else {
+            throw new RuntimeException("语音消息保存失败");
+        }
+    }
 }

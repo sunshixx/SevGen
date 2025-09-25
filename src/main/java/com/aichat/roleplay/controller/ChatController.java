@@ -17,6 +17,7 @@ import java.util.List;
 /**
  * 聊天会话控制器
  * 提供聊天会话的创建、管理功能
+ * 已废弃，聊天使用ssecontroller来实现，该控制器仅留作后续拓展同步调用使用！！！！！
  */
 @RestController
 @RequestMapping("/api/chats")

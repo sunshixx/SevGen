@@ -45,10 +45,28 @@ public class Message implements Serializable {
     private String content;
 
     /**
+     * 消息类型：text（文本）、voice（语音）
+     */
+    @TableField("message_type")
+    private String messageType = "text";
+
+    /**
      * 音频文件URL
      */
     @TableField("audio_url")
     private String audioUrl;
+
+    /**
+     * 音频时长（秒）
+     */
+    @TableField("audio_duration")
+    private Integer audioDuration;
+
+    /**
+     * 语音转文字内容（用于语音消息的文字显示）
+     */
+    @TableField("transcribed_text")
+    private String transcribedText;
 
     /**
      * 是否已读
@@ -98,6 +116,14 @@ public class Message implements Serializable {
         this.chatId = chatId;
     }
 
+    public Long getRoleId() {
+        return roleId;
+    }
+
+    public void setRoleId(Long roleId) {
+        this.roleId = roleId;
+    }
+
     public String getSenderType() {
         return senderType;
     }
@@ -120,6 +146,30 @@ public class Message implements Serializable {
 
     public void setAudioUrl(String audioUrl) {
         this.audioUrl = audioUrl;
+    }
+
+    public String getMessageType() {
+        return messageType;
+    }
+
+    public void setMessageType(String messageType) {
+        this.messageType = messageType;
+    }
+
+    public Integer getAudioDuration() {
+        return audioDuration;
+    }
+
+    public void setAudioDuration(Integer audioDuration) {
+        this.audioDuration = audioDuration;
+    }
+
+    public String getTranscribedText() {
+        return transcribedText;
+    }
+
+    public void setTranscribedText(String transcribedText) {
+        this.transcribedText = transcribedText;
     }
 
     public Boolean getIsRead() {
@@ -154,9 +204,13 @@ public class Message implements Serializable {
     public static class MessageBuilder {
         private Long id;
         private Long chatId;
+        private Long roleId;
         private String senderType;
         private String content;
+        private String messageType = "text";
         private String audioUrl;
+        private Integer audioDuration;
+        private String transcribedText;
         private Boolean isRead = false;
         private LocalDateTime sentAt;
         private Integer deleted = 0;
@@ -168,6 +222,11 @@ public class Message implements Serializable {
 
         public MessageBuilder chatId(Long chatId) {
             this.chatId = chatId;
+            return this;
+        }
+
+        public MessageBuilder roleId(Long roleId) {
+            this.roleId = roleId;
             return this;
         }
 
@@ -183,6 +242,21 @@ public class Message implements Serializable {
 
         public MessageBuilder audioUrl(String audioUrl) {
             this.audioUrl = audioUrl;
+            return this;
+        }
+
+        public MessageBuilder messageType(String messageType) {
+            this.messageType = messageType;
+            return this;
+        }
+
+        public MessageBuilder audioDuration(Integer audioDuration) {
+            this.audioDuration = audioDuration;
+            return this;
+        }
+
+        public MessageBuilder transcribedText(String transcribedText) {
+            this.transcribedText = transcribedText;
             return this;
         }
 
@@ -205,9 +279,13 @@ public class Message implements Serializable {
             Message message = new Message();
             message.setId(this.id);
             message.setChatId(this.chatId);
+            message.setRoleId(this.roleId);
             message.setSenderType(this.senderType);
             message.setContent(this.content);
+            message.setMessageType(this.messageType);
             message.setAudioUrl(this.audioUrl);
+            message.setAudioDuration(this.audioDuration);
+            message.setTranscribedText(this.transcribedText);
             message.setIsRead(this.isRead);
             message.setSentAt(this.sentAt);
             message.setDeleted(this.deleted);

@@ -31,6 +31,28 @@ export const messageAPI = {
   // 标记消息为已读
   markMessagesAsRead: (chatId: number): Promise<ApiResponse> => {
     return request.put(`/messages/chat/${chatId}/read`)
+  },
+
+  // 创建SSE流式连接 - 基于你的SSE实现
+  createStreamConnection: (chatId: number, roleId: number, userMessage: string): EventSource => {
+    const token = localStorage.getItem('token')
+    const baseURL = import.meta.env.DEV ? 'http://localhost:16999' : ''
+    
+    // 构建查询参数
+    const params = new URLSearchParams({
+      chatId: chatId.toString(),
+      roleId: roleId.toString(),
+      userMessage: userMessage
+    })
+    
+    if (token) {
+      params.append('token', token)
+    }
+    
+    const url = `${baseURL}/api/sse/stream?${params.toString()}`
+    console.log('创建SSE流式连接:', url)
+    
+    return new EventSource(url)
   }
 }
 

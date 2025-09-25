@@ -22,8 +22,7 @@
         </div>
         <div class="side-card-content">
           <div class="chat-title">{{ getRoleName(chat.roleId) }}</div>
-          <div class="chat-description">{{ getRoleDescription(chat.roleId) }}</div>
-          <div class="message-preview">{{ getLastMessage(chat.id) || '开始对话...' }}</div>
+          <div v-if="getSafeRoleDescription(chat.roleId)" class="chat-description">{{ getSafeRoleDescription(chat.roleId) }}</div>
         </div>
       </div>
     </div>
@@ -42,7 +41,7 @@
           </div>
           <div class="chat-info">
             <div class="chat-title">{{ getRoleName(activeChat.roleId) }}</div>
-            <div class="chat-description">{{ getRoleDescription(activeChat.roleId) }}</div>
+            <div v-if="getSafeRoleDescription(activeChat.roleId)" class="chat-description">{{ getSafeRoleDescription(activeChat.roleId) }}</div>
           </div>
           <button 
             class="delete-chat-btn"
@@ -64,7 +63,70 @@
               <span v-if="message.senderType === 'user'">你</span>
               <span v-else>{{ getRoleName(activeChat.roleId)[0] }}</span>
             </div>
-            <div class="message-content">{{ message.content }}</div>
+            
+            <!-- 文本消息 -->
+            <div v-if="message.messageType === 'text' || !message.messageType" class="message-content text-message">
+              {{ message.content }}
+            </div>
+            
+            <!-- 语音消息 -->
+            <div v-else-if="message.messageType === 'voice'" class="message-content voice-message">
+              <div class="voice-message-container">
+                <!-- 语音播放控制 -->
+                <div class="voice-controls">
+                  <button 
+                    class="play-btn"
+                    @click="toggleVoicePlay(message.id, message.audioUrl || '')"
+                    :class="{ playing: currentPlayingId === message.id }"
+                  >
+                    <svg v-if="currentPlayingId !== message.id" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5,3 19,12 5,21"></polygon>
+                    </svg>
+                    <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="4" width="4" height="16"></rect>
+                      <rect x="14" y="4" width="4" height="16"></rect>
+                    </svg>
+                  </button>
+                  
+                  <!-- 语音波形/进度显示 -->
+                  <div class="voice-progress">
+                    <div 
+                      class="voice-progress-bar" 
+                      :style="{ width: getVoiceProgress(message.id) + '%' }"
+                    ></div>
+                  </div>
+                  <span class="voice-duration">
+                    {{ getCurrentTimeDisplay(message.id) }}/{{ getTotalTimeDisplay(message.id, message.audioDuration) }}
+                  </span>
+                  
+                  <!-- 转文字按钮 -->
+                  <button 
+                    v-if="message.transcribedText || (message.senderType === 'ai' && message.content)" 
+                    class="transcript-btn"
+                    @click="toggleTranscript(message.id)"
+                    :title="showTranscripts.get(message.id) ? '隐藏文字' : '显示文字'"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14,2 14,8 20,8"></polyline>
+                      <line x1="16" y1="13" x2="8" y2="13"></line>
+                      <line x1="16" y1="17" x2="8" y2="17"></line>
+                      <polyline points="10,9 9,9 8,9"></polyline>
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- 转文字内容（可折叠） -->
+                <div v-if="message.transcribedText && showTranscripts.get(message.id)" class="voice-transcript">
+                  <div class="transcript-content">{{ message.transcribedText }}</div>
+                </div>
+                
+                <!-- AI语音消息的文字内容 -->
+                <div v-if="message.senderType === 'ai' && message.content && showTranscripts.get(message.id)" class="voice-transcript ai-content">
+                  <div class="transcript-content">{{ message.content }}</div>
+                </div>
+              </div>
+            </div>
           </div>
           
           <!-- AI思考状态 -->
@@ -139,8 +201,7 @@
         </div>
         <div class="side-card-content">
           <div class="chat-title">{{ getRoleName(chat.roleId) }}</div>
-          <div class="chat-description">{{ getRoleDescription(chat.roleId) }}</div>
-          <div class="message-preview">{{ getLastMessage(chat.id) || '开始对话...' }}</div>
+          <div v-if="getSafeRoleDescription(chat.roleId)" class="chat-description">{{ getSafeRoleDescription(chat.roleId) }}</div>
         </div>
       </div>
     </div>
@@ -153,7 +214,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { chatAPI, messageAPI, roleAPI } from '@/api'
 import { SSEConnection } from '@/api/message'
-import type { Chat, Message, Role, SendMessageRequest } from '@/types'
+import type { Chat, Message, Role } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -173,6 +234,13 @@ const messagesContainer = ref<HTMLElement | null>(null)
 const isRecording = ref(false)
 const mediaRecorder = ref<MediaRecorder | null>(null)
 const audioChunks = ref<Blob[]>([])
+
+// 语音播放状态
+const currentPlayingId = ref<number | null>(null)
+const showTranscripts = ref<Map<number, boolean>>(new Map())
+const audioElements = ref<Map<number, HTMLAudioElement>>(new Map())
+const playbackProgress = ref<Map<number, { current: number; duration: number }>>(new Map())
+const progressTimer = ref<number | null>(null)
 
 // 自动滚动到消息底部
 const scrollToBottom = () => {
@@ -268,18 +336,31 @@ const processVoiceInput = async (audioBlob: Blob) => {
     return
   }
   
+  const activeChat = chatList.value.find(chat => chat.id === activeChatId.value)
+  if (!activeChat) {
+    ElMessage.error('找不到当前对话')
+    return
+  }
+  
   try {
     console.log('发送语音到后端处理...')
     
     // 创建FormData
     const formData = new FormData()
-    const fileName = audioBlob.type === 'audio/wav' ? 'voice-input.wav' : 'voice-input.webm'
+    const fileName = audioBlob.type === 'audio/wav' ? 'voice-input.wav' : 
+                     audioBlob.type.startsWith('audio/mp4') ? 'voice-input.mp4' :
+                     'voice-input.webm'
     formData.append('audio', audioBlob, fileName)
+    formData.append('chatId', activeChatId.value.toString())
+    formData.append('roleId', activeChat.roleId.toString())
     
     console.log('发送音频格式:', audioBlob.type, '文件大小:', audioBlob.size, 'bytes')
     
     // 显示处理状态
     isAiReplying.value = true
+    
+    // 使用相对路径通过Vite代理，避免CORS问题
+    const url = '/api/voice/chat'
     
     // 从localStorage获取token
     const token = localStorage.getItem('token')
@@ -288,21 +369,38 @@ const processVoiceInput = async (audioBlob: Blob) => {
       headers['Authorization'] = `Bearer ${token}`
     }
     
-    // 发送到后端语音对话接口
-    const response = await fetch('/api/voice/chat', {
+    console.log('发送语音请求到:', url)
+    
+    // 发送到后端语音对话接口 - 通过Vite代理避免跨域问题
+    const response = await fetch(url, {
       method: 'POST',
       headers,
       body: formData
     })
     
+    console.log('语音API响应状态:', response.status)
+    
     if (response.ok) {
       // 获取AI语音回复
       const audioBuffer = await response.arrayBuffer()
-      const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' })
+      const responseAudioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' })
+      
+      console.log('收到AI语音回复，大小:', responseAudioBlob.size, 'bytes')
       
       // 播放AI语音回复
-      const audioUrl = URL.createObjectURL(audioBlob)
+      const audioUrl = URL.createObjectURL(responseAudioBlob)
       const audio = new Audio(audioUrl)
+      
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl) // 清理内存
+        console.log('AI语音回复播放完成')
+      }
+      
+      audio.onerror = (error) => {
+        console.error('音频播放失败:', error)
+        ElMessage.error('音频播放失败')
+        URL.revokeObjectURL(audioUrl)
+      }
       
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl) // 清理内存
@@ -325,6 +423,180 @@ const processVoiceInput = async (audioBlob: Blob) => {
   } finally {
     isAiReplying.value = false
   }
+}
+
+// 语音消息播放控制
+const toggleVoicePlay = async (messageId: number, audioUrl: string) => {
+  try {
+    const isPlaying = currentPlayingId.value === messageId
+    
+    // 停止当前播放的音频和定时器
+    if (currentPlayingId.value !== null) {
+      const currentAudio = audioElements.value.get(currentPlayingId.value)
+      if (currentAudio) {
+        currentAudio.pause()
+        currentAudio.currentTime = 0
+      }
+      currentPlayingId.value = null
+      stopProgressTimer()
+    }
+    
+    // 如果点击的是当前播放的消息，则停止播放
+    if (isPlaying) {
+      return
+    }
+    
+    // 开始播放新的音频
+    let audio = audioElements.value.get(messageId)
+    if (!audio) {
+      // 如果音频还未预加载，创建新的音频元素
+      audio = new Audio(audioUrl)
+      audioElements.value.set(messageId, audio)
+      
+      audio.onloadedmetadata = () => {
+        // 初始化进度数据
+        playbackProgress.value.set(messageId, {
+          current: 0,
+          duration: audio?.duration || 0
+        })
+      }
+    }
+    
+    // 设置播放事件（每次播放都需要重新设置）
+    audio.onended = () => {
+      currentPlayingId.value = null
+      stopProgressTimer()
+      // 重置进度
+      const currentProgress = playbackProgress.value.get(messageId)
+      if (currentProgress) {
+        playbackProgress.value.set(messageId, {
+          current: 0,
+          duration: currentProgress.duration
+        })
+      }
+    }
+    
+    audio.onerror = (error) => {
+      console.error('音频播放失败:', error)
+      ElMessage.error('音频播放失败')
+      currentPlayingId.value = null
+      stopProgressTimer()
+    }
+    
+    currentPlayingId.value = messageId
+    await audio.play()
+    startProgressTimer(messageId)
+  } catch (error) {
+    console.error('语音播放错误:', error)
+    ElMessage.error('语音播放失败')
+    currentPlayingId.value = null
+    stopProgressTimer()
+  }
+}
+
+// 开始进度定时器
+const startProgressTimer = (messageId: number) => {
+  stopProgressTimer() // 确保之前的定时器已停止
+  
+  progressTimer.value = setInterval(() => {
+    const audio = audioElements.value.get(messageId)
+    if (audio && !audio.paused) {
+      playbackProgress.value.set(messageId, {
+        current: audio.currentTime,
+        duration: audio.duration || 0
+      })
+    }
+  }, 100) // 每100ms更新一次进度，确保流畅
+}
+
+// 停止进度定时器
+const stopProgressTimer = () => {
+  if (progressTimer.value) {
+    clearInterval(progressTimer.value)
+    progressTimer.value = null
+  }
+}
+
+// 获取语音播放进度百分比
+const getVoiceProgress = (messageId: number): number => {
+  const progress = playbackProgress.value.get(messageId)
+  if (!progress || progress.duration === 0) return 0
+  return (progress.current / progress.duration) * 100
+}
+
+// 获取总时长显示
+const getTotalTimeDisplay = (messageId: number, audioDuration?: number): string => {
+  const progress = playbackProgress.value.get(messageId)
+  // 优先使用音频文件的实际时长，如果没有则使用数据库保存的时长
+  if (progress && progress.duration > 0) {
+    return formatTime(progress.duration)
+  }
+  // 如果还没有播放过，使用数据库中保存的时长
+  if (audioDuration && audioDuration > 0) {
+    return formatTime(audioDuration)
+  }
+  return '0:00'
+}
+
+// 获取当前播放时间显示
+const getCurrentTimeDisplay = (messageId: number): string => {
+  const progress = playbackProgress.value.get(messageId)
+  if (!progress) return '0:00'
+  return formatTime(progress.current)
+}
+
+// 格式化时间显示
+const formatTime = (seconds: number): string => {
+  if (!seconds || seconds <= 0) return '0:00'
+  const minutes = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${minutes}:${secs.toString().padStart(2, '0')}`
+}
+
+// 切换转录文本显示
+const toggleTranscript = (messageId: number) => {
+  const currentState = showTranscripts.value.get(messageId) || false
+  const newState = !currentState
+  showTranscripts.value.set(messageId, newState)
+  
+  // 如果是展开转文字内容，延迟一点时间等DOM更新后滚动到底部
+  if (newState) {
+    nextTick(() => {
+      setTimeout(() => {
+        scrollToBottom()
+      }, 100) // 给一点时间让转文字内容完全展开
+    })
+  }
+}
+
+// 预加载语音消息元数据
+const preloadVoiceMessage = (messageId: number, audioUrl: string, dbDuration: number) => {
+  // 先初始化进度数据，使用数据库中的时长
+  playbackProgress.value.set(messageId, {
+    current: 0,
+    duration: dbDuration
+  })
+  
+  // 异步加载音频元数据获取真实时长
+  const audio = new Audio(audioUrl)
+  audio.preload = 'metadata' // 只预加载元数据，不加载整个音频文件
+  
+  audio.onloadedmetadata = () => {
+    // 更新为真实的音频时长
+    playbackProgress.value.set(messageId, {
+      current: 0,
+      duration: audio.duration
+    })
+    console.log(`语音消息 ${messageId} 元数据加载完成，时长: ${audio.duration}s`)
+  }
+  
+  audio.onerror = (error) => {
+    console.warn(`语音消息 ${messageId} 元数据加载失败:`, error)
+    // 保持使用数据库中的时长
+  }
+  
+  // 缓存音频元素以备后续播放使用
+  audioElements.value.set(messageId, audio)
 }
 
 // 角色数据缓存
@@ -357,13 +629,14 @@ const activeChat = computed(() => {
 // 去重处理：确保每个角色只有一个聊天，按角色ID去重
 const uniqueChats = computed(() => {
   const seen = new Set<number>()
-  return chatList.value.filter(chat => {
+  const result = chatList.value.filter(chat => {
     if (seen.has(chat.roleId)) {
       return false
     }
     seen.add(chat.roleId)
     return true
   })
+  return result
 })
 
 // 左列聊天（排除当前活跃的聊天）
@@ -383,30 +656,85 @@ const rightColumnChats = computed(() => {
 // 获取角色名称
 const getRoleName = (roleId: number): string => {
   const role = rolesCache.value.get(roleId)
-  const roleName = role?.name || '未知角色'
   
-  // 添加调试信息
   if (!role) {
-    console.log(`获取角色名称失败: roleId=${roleId}, 缓存中不存在该角色`)
-    console.log('当前缓存状态:', Array.from(rolesCache.value.entries()))
+    return '角色' // 如果角色不在缓存中，返回默认名称
   }
   
-  return roleName
+  // 确保角色名称不是 undefined、null 或空字符串
+  const name = role.name
+  if (!name || 
+      name === 'undefined' || 
+      name === undefined || 
+      name === null ||
+      name.toString().toLowerCase() === 'undefined' ||
+      name.trim() === '') {
+    return '角色' // 返回默认名称
+  }
+  
+  return name.trim()
+}
+
+// 安全获取角色描述，绝对不显示undefined
+const getSafeRoleDescription = (roleId: number): string => {
+  try {
+    const description = getRoleDescription(roleId)
+    
+    // 严格检查所有可能的无效值
+    if (!description || 
+        description === 'undefined' || 
+        description === undefined ||
+        description === null ||
+        description === 'null' ||
+        description.toString() === 'undefined' ||
+        description.toString() === 'null' ||
+        description.toString().toLowerCase().includes('undefined') ||
+        description.toString().toLowerCase().includes('null') ||
+        description.trim() === '') {
+      return ''
+    }
+    
+    const result = description.trim()
+    
+    // 最终检查结果
+    if (result.toLowerCase().includes('undefined') || 
+        result.toLowerCase().includes('null') ||
+        result === 'undefined' ||
+        result === 'null') {
+      return ''
+    }
+    
+    return result
+  } catch (error) {
+    console.warn('获取角色描述时出错:', error)
+    return ''
+  }
 }
 
 // 获取角色描述
 const getRoleDescription = (roleId: number): string => {
   const role = rolesCache.value.get(roleId)
-  return role?.description || '暂无描述'
+  
+  if (!role) {
+    return '' // 如果角色不在缓存中，返回空字符串
+  }
+  
+  // 确保描述不是 undefined、null 或空字符串，或者字符串 "undefined"
+  const description = role.description
+  
+  if (!description || 
+      description === 'undefined' || 
+      description === undefined || 
+      description === null ||
+      description.toString().toLowerCase() === 'undefined' ||
+      description.trim() === '') {
+    return '' // 返回空字符串
+  }
+  
+  return description.trim()
 }
 
 // 获取最后一条消息
-const getLastMessage = (chatId: number): string => {
-  const messages = allMessages.value.get(chatId) || []
-  const lastMessage = messages[messages.length - 1]
-  return lastMessage?.content.slice(0, 30) + (lastMessage?.content.length > 30 ? '...' : '') || ''
-}
-
 // 切换到活动聊天
 const switchToActiveChat = (chatId: number) => {
   activeChatId.value = chatId
@@ -423,9 +751,14 @@ const sendMessage = async () => {
   await sendMessageToChat(activeChatId.value, messageContent)
 }
 
-// 发送消息到指定聊天 - 使用同步API，简单可靠
+// 发送消息到指定聊天 - 使用SSE流式接口
 const sendMessageToChat = async (chatId: number, content: string) => {
   try {
+    const chat = chatList.value.find(c => c.id === chatId)
+    if (!chat) {
+      ElMessage.error('聊天会话不存在')
+      return
+    }
 
     isAiReplying.value = true
     
@@ -446,62 +779,120 @@ const sendMessageToChat = async (chatId: number, content: string) => {
     // 自动滚动到底部，让用户看到刚发送的消息
     scrollToBottom()
     
-    // 构建请求
-    const sendRequest: SendMessageRequest = {
-      chatId: chatId,
-      content: content
+    console.log('开始SSE流式对话:', {
+      chatId,
+      roleId: chat.roleId,
+      content: content.substring(0, 50) + '...'
+    })
+    
+    // 创建SSE连接
+    const eventSource = messageAPI.createStreamConnection(chatId, chat.roleId, content)
+    
+    // 用于累积AI回复的变量
+    let aiResponse = ''
+    let tempAiMessage: Message | null = null
+    
+    // 监听SSE事件
+    eventSource.onmessage = (event) => {
+      try {
+        const data = event.data.trim()
+        console.log('收到SSE数据:', data)
+        
+        // 解析数据：你的后端发送的格式是 "data: token"
+        if (data.startsWith('data: ')) {
+          const token = data.substring(6) // 移除 "data: " 前缀
+          
+          if (token === '[DONE]') {
+            // AI回复完成
+            console.log('AI回复完成，累积内容长度:', aiResponse.length)
+            
+            // 移除临时消息，重新加载完整列表
+            
+            // 重新加载完整的消息列表（包含数据库中保存的真实消息）
+            loadMessages(chatId)
+            
+            eventSource.close()
+            isAiReplying.value = false
+            ElMessage.success('消息发送成功')
+            
+          } else if (token === '[ERROR]') {
+            // AI回复出错
+            console.error('AI回复出错')
+            ElMessage.error('AI回复异常，请重试')
+            eventSource.close()
+            isAiReplying.value = false
+            
+          } else {
+            // 累积AI回复token
+            aiResponse += token
+            
+            // 创建或更新临时AI消息用于实时显示
+            if (!tempAiMessage) {
+              tempAiMessage = {
+                id: Date.now() + 1, // 确保与用户消息ID不同
+                chatId: chatId,
+                content: aiResponse,
+                senderType: 'ai',
+                sentAt: new Date().toISOString(),
+                isRead: false
+              }
+              
+              // 添加临时AI消息到列表
+              const currentMessages = allMessages.value.get(chatId) || []
+              allMessages.value.set(chatId, [...currentMessages, tempAiMessage])
+              
+            } else {
+              // 更新现有临时AI消息的内容
+              if (tempAiMessage) {
+                tempAiMessage.content = aiResponse
+                
+                // 触发响应式更新
+                const currentMessages = allMessages.value.get(chatId) || []
+                const updatedMessages = currentMessages.map(msg => 
+                  msg.id === tempAiMessage!.id ? { ...tempAiMessage! } : msg
+                )
+                allMessages.value.set(chatId, updatedMessages)
+              }
+            }
+            
+            // 滚动到最新消息
+            scrollToBottom()
+          }
+        }
+        
+      } catch (error) {
+        console.error('处理SSE消息失败:', error, event.data)
+      }
     }
     
-    console.log('发送同步消息请求:', sendRequest)
-    
-    // 使用同步API
-    const response = await messageAPI.sendMessage(sendRequest)
-    console.log('同步消息发送响应:', response)
-    
-    if (response.success && response.data) {
-      // 获取当前消息列表
+    eventSource.onerror = (error) => {
+      console.error('SSE连接错误:', error)
+      ElMessage.error('连接异常，请重试')
+      eventSource.close()
+      
+      // 移除临时消息
       const messages = allMessages.value.get(chatId) || []
-      
-      // 移除临时用户消息
-      const filteredMessages = messages.filter(msg => msg.id !== tempUserMessage.id)
-      
-      // 添加服务器返回的真实消息
-      const updatedMessages = [...filteredMessages]
-      
-      if (response.data.userMessage) {
-        updatedMessages.push(response.data.userMessage)
-      }
-      
-      if (response.data.aiMessage) {
-        updatedMessages.push(response.data.aiMessage)
-      }
-      
-      // 更新消息列表
-      allMessages.value.set(chatId, updatedMessages)
-      
-      // 滚动到最新消息
-      scrollToBottom()
-      
-      ElMessage.success('消息发送成功')
-    } else {
-      // 如果发送失败，移除临时消息
-      const messages = allMessages.value.get(chatId) || []
-      const filteredMessages = messages.filter(msg => msg.id !== tempUserMessage.id)
+      const filteredMessages = messages.filter(msg => 
+        msg.id !== tempUserMessage.id && 
+        (tempAiMessage ? msg.id !== tempAiMessage.id : true)
+      )
       allMessages.value.set(chatId, filteredMessages)
       
-      console.error('消息发送失败:', response.message)
-      ElMessage.error(response.message || '发送消息失败')
+      isAiReplying.value = false
+    }
+    
+    eventSource.onopen = () => {
+      console.log('SSE连接已建立')
     }
     
   } catch (error: any) {
-    // 发送失败时也要移除临时消息
+    // 发送失败时移除临时消息
     const messages = allMessages.value.get(chatId) || []
-    const filteredMessages = messages.filter(msg => msg.id !== Date.now()) // 简单过滤临时消息
+    const filteredMessages = messages.filter(msg => msg.id !== Date.now())
     allMessages.value.set(chatId, filteredMessages)
     
     console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败，请检查网络连接')
-  } finally {
     isAiReplying.value = false
   }
 }
@@ -552,7 +943,7 @@ const deleteChat = async (chatId: number) => {
       ElMessage.error('删除对话失败')
     }
   }
-)
+}
 
 
 // 加载聊天列表
@@ -584,6 +975,9 @@ const loadChatList = async () => {
       chatList.value = response.data
       console.log(`成功加载 ${chatList.value.length} 个聊天记录`)
       
+      // 检查是否需要为其他角色创建聊天
+      await ensureAllRoleChats()
+      
     } else {
       console.log('没有现有聊天记录，创建基于角色的聊天...')
       await createChatsFromRoles()
@@ -610,17 +1004,17 @@ const createChatsFromRoles = async () => {
     }
     
     const roles = rolesResponse.data // 移除限制，显示所有角色
-    console.log(`找到 ${roles.length} 个公开角色:`, roles)
+    console.log(`从API获取到 ${roles.length} 个公开角色`)
     
     // 先缓存所有角色信息
     roles.forEach(role => {
       rolesCache.value.set(role.id, role)
       console.log(`缓存角色: ID=${role.id}, Name=${role.name}`)
     })
-    
+
     // 为每个角色创建一个聊天对话
     const createdChats: Chat[] = []
-    
+
     for (const role of roles) {
       try {
         console.log(`正在为角色 ${role.name} (ID: ${role.id}) 创建聊天...`)
@@ -650,6 +1044,60 @@ const createChatsFromRoles = async () => {
   }
 }
 
+// 确保所有角色都有对应的聊天记录
+const ensureAllRoleChats = async () => {
+  try {
+    console.log('=== 开始检查所有角色的聊天记录 ===')
+    
+    // 获取所有公开角色
+    const rolesResponse = await roleAPI.getAllPublicRoles()
+    if (!rolesResponse.success || !rolesResponse.data) {
+      console.log('获取角色列表失败:', rolesResponse.message)
+      return
+    }
+    
+    const allRoles = rolesResponse.data
+    console.log(`数据库中共有 ${allRoles.length} 个公开角色`)
+    
+    // 缓存所有角色信息
+    allRoles.forEach(role => {
+      rolesCache.value.set(role.id, role)
+    })
+    
+    // 检查哪些角色没有聊天记录
+    const existingRoleIds = new Set(chatList.value.map(chat => chat.roleId))
+    const missingRoles = allRoles.filter(role => !existingRoleIds.has(role.id))
+    
+    console.log(`已有聊天的角色ID: [${Array.from(existingRoleIds).join(', ')}]`)
+    console.log(`缺失聊天的角色: ${missingRoles.length} 个`, missingRoles.map(r => `${r.name}(ID:${r.id})`))
+    
+    // 为缺失的角色创建聊天记录
+    for (const role of missingRoles) {
+      try {
+        console.log(`为角色 ${role.name} (ID: ${role.id}) 创建聊天...`)
+        const createChatResponse = await chatAPI.createChat({
+          roleId: role.id,
+          title: `与${role.name}的对话`
+        })
+        
+        if (createChatResponse.success && createChatResponse.data) {
+          chatList.value.push(createChatResponse.data)
+          console.log(`成功为角色 ${role.name} 创建聊天`)
+        } else {
+          console.error(`为角色 ${role.name} 创建聊天失败:`, createChatResponse.message)
+        }
+      } catch (error) {
+        console.error(`为角色 ${role.name} 创建聊天时出错:`, error)
+      }
+    }
+    
+    console.log(`=== 聊天检查完成，最终聊天数量: ${chatList.value.length} ===`)
+    
+  } catch (error) {
+    console.error('确保角色聊天记录时出错:', error)
+  }
+}
+
 // 加载角色信息
 const loadRole = async (roleId: number) => {
   try {
@@ -672,7 +1120,7 @@ const loadRole = async (roleId: number) => {
     console.error(`加载角色信息失败: ID=${roleId}`, error)
     return null
   }
-})
+}
 
 
 // 加载消息列表
@@ -684,6 +1132,14 @@ const loadMessages = async (chatId: number) => {
     const response = await messageAPI.getChatMessages(chatId)
     if (response.success && response.data) {
       allMessages.value.set(chatId, response.data)
+      
+      // 预加载语音消息的音频元数据
+      response.data.forEach((message: Message) => {
+        if (message.messageType === 'voice' && message.audioUrl) {
+          preloadVoiceMessage(message.id, message.audioUrl, message.audioDuration || 0)
+        }
+      })
+      
       // 加载完消息后滚动到底部
       scrollToBottom()
     } else {
@@ -729,6 +1185,19 @@ onUnmounted(() => {
     sseConnection.value.disconnect()
     console.log('SSE连接已清理')
   }
+  
+  // 清理语音播放定时器
+  stopProgressTimer()
+  
+  // 清理所有音频元素
+  audioElements.value.forEach(audio => {
+    audio.pause()
+    audio.src = ''
+  })
+  audioElements.value.clear()
+  playbackProgress.value.clear()
+  
+  console.log('语音播放资源已清理')
 })
 
 // 监听activeChatId变化，加载对应消息
@@ -740,6 +1209,24 @@ watch(activeChatId, (newChatId) => {
 </script>
 
 <style scoped>
+/* 全局隐藏任何包含 undefined 的文本 */
+*:not(script):not(style) {
+  font-size: inherit;
+}
+
+/* 隐藏任何可能显示 undefined 的文本内容 */
+.chat-description:empty,
+.chat-description:contains("undefined"),
+*[data-undefined],
+*:contains("undefined") {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 .three-column-chat-container {
   width: 100vw;
   height: 100vh;
@@ -812,16 +1299,11 @@ watch(activeChatId, (newChatId) => {
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-height: 0; /* 允许空内容时不占用高度 */
 }
 
-.side-card-content .message-preview {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.side-card-content .chat-description:empty {
+  display: none; /* 完全隐藏空的描述元素 */
 }
 
 /* 中间活跃区域 */
@@ -884,6 +1366,11 @@ watch(activeChatId, (newChatId) => {
 .chat-info .chat-description {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.8);
+  min-height: 0; /* 允许空内容时不占用高度 */
+}
+
+.chat-info .chat-description:empty {
+  display: none; /* 完全隐藏空的描述元素 */
 }
 
 /* 消息容器 */
@@ -1127,6 +1614,149 @@ watch(activeChatId, (newChatId) => {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
+}
+
+/* 语音消息样式 */
+.voice-message {
+  max-width: 100%;
+}
+
+.voice-message-container {
+  min-width: 180px;
+  max-width: 280px;
+  padding: 4px;
+}
+
+.voice-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.play-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.play-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.play-btn.playing {
+  background: rgba(124, 58, 237, 0.9);
+  color: #fff;
+}
+
+.voice-progress {
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0 4px;
+}
+
+.voice-progress-bar {
+  height: 100%;
+  background: rgba(124, 58, 237, 0.8);
+  border-radius: 2px;
+  transition: width 0.1s ease;
+  width: 0%;
+}
+
+.voice-duration {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  min-width: 45px;
+  text-align: right;
+  flex-shrink: 0;
+  font-family: 'Times New Roman', serif;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.transcript-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.transcript-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  transform: scale(1.05);
+}
+
+.voice-transcript {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  border-left: 3px solid rgba(124, 58, 237, 0.6);
+  font-size: 13px;
+  line-height: 1.5;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.transcript-content {
+  color: rgba(255, 255, 255, 0.9);
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.voice-transcript.ai-content {
+  border-left-color: rgba(59, 130, 246, 0.7);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+/* 用户语音转录样式 */
+.voice-transcript:not(.ai-content) {
+  border-left-color: rgba(124, 58, 237, 0.7);
+  background: rgba(124, 58, 237, 0.05);
+}
+
+/* 转文字内容前的标签 */
+.voice-transcript:not(.ai-content)::before {
+  content: "转录文字";
+  font-size: 11px;
+  color: rgba(124, 58, 237, 0.8);
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.voice-transcript.ai-content::before {
+  content: "AI回复文字";
+  font-size: 11px;
+  color: rgba(59, 130, 246, 0.8);
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
 }
 
 /* 响应式设计 */

@@ -16,7 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @RestController
 @RequestMapping("/api/voice")
-@CrossOrigin(origins = "*")
 public class VoiceController {
     
     private static final Logger log = LoggerFactory.getLogger(VoiceController.class);
@@ -29,9 +28,13 @@ public class VoiceController {
      * 接收音频文件，返回音频响应
      */
     @PostMapping("/chat")
-    public ResponseEntity<byte[]> voiceChat(@RequestParam("audio") MultipartFile audioFile) {
+    public ResponseEntity<byte[]> voiceChat(
+            @RequestParam("audio") MultipartFile audioFile,
+            @RequestParam("chatId") Long chatId,
+            @RequestParam("roleId") Long roleId) {
         try {
             log.info("收到语音对话请求，开始API串接处理");
+            log.info("聊天ID: {}, 角色ID: {}", chatId, roleId);
             log.info("文件名: {}, 大小: {} bytes, 内容类型: {}", 
                     audioFile.getOriginalFilename(), audioFile.getSize(), audioFile.getContentType());
             
@@ -52,7 +55,7 @@ public class VoiceController {
                 log.warn("可能不是音频文件类型: {}", contentType);
             }
 
-            byte[] audioResponse = voiceService.processVoiceChat(audioFile);
+            byte[] audioResponse = voiceService.processVoiceChat(audioFile, chatId, roleId);
             
 
             HttpHeaders headers = new HttpHeaders();
