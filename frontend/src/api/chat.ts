@@ -8,29 +8,13 @@ export const chatAPI = {
     return request.post('/chats', data)
   },
 
-  // 获取用户的所有聊天会话
-  getUserChats: (): Promise<ApiResponse<Chat[]>> => {
-    return request.get('/chats')
-  },
-
-  // 获取用户的活跃聊天会话
-  getUserActiveChats: (): Promise<ApiResponse<Chat[]>> => {
-    return request.get('/chats/active')
-  },
-
-  // 根据ID获取聊天会话详情
-  getChatById: (id: number): Promise<ApiResponse<Chat>> => {
-    return request.get(`/chats/${id}`)
-  },
-
-  // 更新聊天会话
-  updateChat: (id: number, data: Partial<Chat>): Promise<ApiResponse<Chat>> => {
-    return request.put(`/chats/${id}`, data)
-  },
-
-  // 停用聊天会话
-  deactivateChat: (id: number): Promise<ApiResponse> => {
-    return request.put(`/chats/${id}/deactivate`)
+  // 分页获取用户的聊天会话
+  getUserChats: (lastUpdatedAt?: string, pageSize: number = 20): Promise<ApiResponse<Chat[]>> => {
+    const params: any = { pageSize }
+    if (lastUpdatedAt) {
+      params.lastUpdatedAt = lastUpdatedAt
+    }
+    return request.get('/chats/list', { params })
   },
 
   // 删除聊天会话

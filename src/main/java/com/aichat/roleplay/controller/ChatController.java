@@ -62,23 +62,8 @@ public class ChatController {
     }
 
     /**
-     * 获取用户的所有聊天会话
+     * 分页获取用户的聊天会话列表
      */
-    @GetMapping
-    public ApiResponse<List<ChatVO>> getUserChats() {
-        User user = getCurrentUser();
-        log.debug("获取用户聊天会话列表，用户: {}", user.getUsername());
-
-        try {
-            List<Chat> chats = chatService.getUserChats(user.getId());
-            List<ChatVO> chatsVO = ChatVO.po2voList(chats);
-            return ApiResponse.success("获取聊天会话列表成功", chatsVO);
-
-        } catch (Exception e) {
-            log.error("获取聊天会话列表失败", e);
-            return ApiResponse.error("获取聊天会话列表失败: " + e.getMessage());
-        }
-    }
     @GetMapping("/list")
     public ApiResponse<List<ChatVO>> getUserChats(
             @RequestParam(required = false) LocalDateTime lastUpdatedAt,
@@ -94,105 +79,6 @@ public class ChatController {
         } catch (Exception e) {
             log.error("获取聊天会话列表失败", e);
             return ApiResponse.error("获取聊天会话列表失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 获取用户的活跃聊天会话
-     */
-    @GetMapping("/active")
-    public ApiResponse<List<Chat>> getUserActiveChats() {
-        User user = getCurrentUser();
-        log.debug("获取用户活跃聊天会话，用户: {}", user.getUsername());
-
-        try {
-            List<Chat> chats = chatService.getUserActiveChats(user.getId());
-            return ApiResponse.success("获取活跃聊天会话成功", chats);
-
-        } catch (Exception e) {
-            log.error("获取活跃聊天会话失败", e);
-            return ApiResponse.error("获取活跃聊天会话失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 根据ID获取聊天会话详情
-     */
-    @GetMapping("/{id}")
-    public ApiResponse<Chat> getChatById(@PathVariable Long id) {
-        log.debug("获取聊天会话详情，会话ID: {}", id);
-
-        try {
-            User user = getCurrentUser();
-            Chat chat = chatService.getChatById(id)
-                    .orElseThrow(() -> new RuntimeException("聊天会话不存在"));
-
-            // 验证聊天会话所有权
-            if (!chat.getUserId().equals(user.getId())) {
-                return ApiResponse.error(403, "无权访问该聊天会话");
-            }
-
-            return ApiResponse.success("获取聊天会话详情成功", chat);
-
-        } catch (Exception e) {
-            log.error("获取聊天会话详情失败", e);
-            return ApiResponse.error("获取聊天会话详情失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 更新聊天会话
-     */
-    @PutMapping("/{id}")
-    public ApiResponse<Chat> updateChat(@PathVariable Long id,
-                                        @RequestBody Chat chat) {
-        log.info("更新聊天会话，会话ID: {}", id);
-
-        try {
-            User user = getCurrentUser();
-
-            // 验证聊天会话存在性和所有权
-            Chat existingChat = chatService.getChatById(id)
-                    .orElseThrow(() -> new RuntimeException("聊天会话不存在"));
-
-            if (!existingChat.getUserId().equals(user.getId())) {
-                return ApiResponse.error(403, "无权更新该聊天会话");
-            }
-
-            chat.setId(id);
-            chat.setUserId(user.getId()); // 确保不能修改所有者
-            Chat updatedChat = chatService.updateChat(chat);
-
-            return ApiResponse.success("聊天会话更新成功", updatedChat);
-
-        } catch (Exception e) {
-            log.error("更新聊天会话失败", e);
-            return ApiResponse.error("更新聊天会话失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 停用聊天会话
-     */
-    @PutMapping("/{id}/deactivate")
-    public ApiResponse<String> deactivateChat(@PathVariable Long id) {
-        log.info("停用聊天会话，会话ID: {}", id);
-
-        try {
-            User user = getCurrentUser();
-            Chat chat = chatService.getChatById(id)
-                    .orElseThrow(() -> new RuntimeException("聊天会话不存在"));
-
-            if (!chat.getUserId().equals(user.getId())) {
-                return ApiResponse.error(403, "无权停用该聊天会话");
-            }
-
-            chatService.deactivateChat(id);
-            return ApiResponse.success("聊天会话停用成功");
-
-        } catch (Exception e) {
-            log.error("停用聊天会话失败", e);
-            return ApiResponse.error("停用聊天会话失败: " + e.getMessage());
         }
     }
 

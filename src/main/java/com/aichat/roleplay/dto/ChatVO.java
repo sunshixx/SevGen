@@ -43,7 +43,7 @@ public class ChatVO {
                 .userId(chat.getUserId())
                 .roleId(chat.getRoleId())
                 .title(chat.getTitle())
-                .updatedAt(chat.getUpdateTime().toString() )
+                .updatedAt(chat.getUpdateTime() != null ? chat.getUpdateTime().toString() : null)
                 .build();
     }
 
