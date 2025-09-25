@@ -2,9 +2,9 @@ package com.aichat.roleplay.service.impl;
 
 import com.aichat.roleplay.config.MailProperties;
 import com.aichat.roleplay.service.IEmailService;
-import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -13,13 +13,15 @@ import org.springframework.stereotype.Service;
  * 邮件服务实现类
  */
 @Service
-@AllArgsConstructor
 public class EmailServiceImpl implements IEmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
 
-    private final JavaMailSender mailSender;
-    private final MailProperties mailProperties;
+    @Autowired
+    private JavaMailSender mailSender;
+    
+    @Autowired
+    private MailProperties mailProperties;
 
     @Override
     public boolean sendVerificationCode(String to, String code) {

@@ -26,12 +26,10 @@ spring:
             required: true
           ssl:
             trust: ${MAIL_HOST:smtp.qq.com}
-    # 邮件模板配置
     template:
       from: ${MAIL_FROM:${spring.mail.username}}
       from-name: ${MAIL_FROM_NAME:RolePlay验证码}
 
-# MyBatis-Plus配置
 mybatis-plus:
   mapper-locations: classpath*:mapper/*.xml
   type-aliases-package: com.aichat.roleplay.model
@@ -41,16 +39,32 @@ mybatis-plus:
     db-config:
       id-type: auto
 
-# LangChain4j OpenAI配置 - 使用七牛代理
 langchain4j:
   open-ai:
     chat-model:
       base-url: https://openai.qiniu.com/v1
       api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
-
       model-name: deepseek/deepseek-v3.1-terminus
-
       temperature: 0.7
+    
+    # 语音转文字模型配置
+    speech-to-text-model:
+      base-url: https://openai.qiniu.com/v1
+      api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
+      model-name: ${OPENAI_SPEECH_TO_TEXT_MODEL:asr}
+    
+    # 文字转语音模型配置  
+    text-to-speech-model:
+      base-url: https://openai.qiniu.com/v1
+      api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
+      model-name: ${OPENAI_TEXT_TO_SPEECH_MODEL:tts}
+      voice: ${OPENAI_TTS_VOICE:alloy}
+
+# 文件存储配置
+file:
+  storage:
+    upload-url: ${FILE_UPLOAD_URL:http://111.62.241.115/upload.php}  # 远程上传接口
+    base-url: ${FILE_STORAGE_URL:http://111.62.241.115}   # 远程访问地址
 
 # 日志配置
 logging:

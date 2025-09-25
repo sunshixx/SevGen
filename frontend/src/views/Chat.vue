@@ -167,8 +167,10 @@ const isAiReplying = ref(false)
 // 消息列表引用，用于滚动控制
 const messagesContainer = ref<HTMLElement | null>(null)
 
-// 语音输入状态（预留接口）
+// 语音输入状态
 const isRecording = ref(false)
+const mediaRecorder = ref<MediaRecorder | null>(null)
+const audioChunks = ref<Blob[]>([])
 
 // 自动滚动到消息底部
 const scrollToBottom = () => {
@@ -179,18 +181,148 @@ const scrollToBottom = () => {
   })
 }
 
-// 语音输入开始（预留接口）
-const startVoiceInput = () => {
-  // TODO: 明天实现语音输入功能
-  console.log('开始语音输入...')
-  isRecording.value = true
+// 语音输入开始
+const startVoiceInput = async () => {
+  try {
+    console.log('开始语音录制...')
+    
+    // 获取麦克风权限
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      audio: {
+        sampleRate: 16000, // 16kHz采样率，语音识别常用
+        channelCount: 1,   // 单声道
+        echoCancellation: true,
+        noiseSuppression: true
+      } 
+    })
+    
+    // 创建录音器 - 优先使用MP3兼容格式
+    let options: MediaRecorderOptions = {}
+    
+    if (MediaRecorder.isTypeSupported('audio/mp4')) {
+      options.mimeType = 'audio/mp4' // MP4容器，AAC编码，七牛云兼容
+      console.log('使用音频格式: audio/mp4 (AAC编码)')
+    } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      options.mimeType = 'audio/webm;codecs=opus'
+      console.log('使用音频格式: audio/webm (Opus编码)')
+    } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+      options.mimeType = 'audio/webm'
+      console.log('使用音频格式: audio/webm (默认编码)')
+    } else {
+      console.log('使用音频格式: 浏览器默认格式')
+    }
+    
+    mediaRecorder.value = new MediaRecorder(stream, options)
+    audioChunks.value = []
+    
+    // 录音数据收集
+    mediaRecorder.value.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunks.value.push(event.data)
+      }
+    }
+    
+    // 录音结束处理 - 简化版本
+    mediaRecorder.value.onstop = async () => {
+      console.log('录音结束，处理音频数据...')
+      
+      // 获取录音器实际使用的MIME类型
+      const mimeType = mediaRecorder.value?.mimeType || 'audio/webm'
+      
+      // 创建音频Blob，使用录音器的实际格式
+      const audioBlob = new Blob(audioChunks.value, { type: mimeType })
+      console.log('录制音频格式:', mimeType, '大小:', audioBlob.size, 'bytes')
+      
+      // 直接发送到后端处理（后端会处理格式转换）
+      await processVoiceInput(audioBlob)
+      
+      // 清理资源
+      stream.getTracks().forEach(track => track.stop())
+    }
+    
+    // 开始录音
+    mediaRecorder.value.start()
+    isRecording.value = true
+    
+  } catch (error) {
+    console.error('语音录制启动失败:', error)
+    ElMessage.error('语音录制启动失败，请检查麦克风权限')
+  }
 }
 
-// 语音输入结束（预留接口）
+// 语音输入结束
 const stopVoiceInput = () => {
-  // TODO: 明天实现语音输入功能
-  console.log('结束语音输入...')
-  isRecording.value = false
+  if (mediaRecorder.value && isRecording.value) {
+    console.log('停止语音录制...')
+    mediaRecorder.value.stop()
+    isRecording.value = false
+  }
+}
+
+// 处理语音输入
+const processVoiceInput = async (audioBlob: Blob) => {
+  if (!activeChatId.value) {
+    ElMessage.error('请先选择一个对话')
+    return
+  }
+  
+  try {
+    console.log('发送语音到后端处理...')
+    
+    // 创建FormData
+    const formData = new FormData()
+    const fileName = audioBlob.type === 'audio/wav' ? 'voice-input.wav' : 'voice-input.webm'
+    formData.append('audio', audioBlob, fileName)
+    
+    console.log('发送音频格式:', audioBlob.type, '文件大小:', audioBlob.size, 'bytes')
+    
+    // 显示处理状态
+    isAiReplying.value = true
+    
+    // 从localStorage获取token
+    const token = localStorage.getItem('token')
+    const headers: Record<string, string> = {}
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    
+    // 发送到后端语音对话接口
+    const response = await fetch('/api/voice/chat', {
+      method: 'POST',
+      headers,
+      body: formData
+    })
+    
+    if (response.ok) {
+      // 获取AI语音回复
+      const audioBuffer = await response.arrayBuffer()
+      const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' })
+      
+      // 播放AI语音回复
+      const audioUrl = URL.createObjectURL(audioBlob)
+      const audio = new Audio(audioUrl)
+      
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl) // 清理内存
+      }
+      
+      await audio.play()
+      console.log('AI语音回复播放完成')
+      
+      // 刷新消息列表以显示新的对话内容
+      await loadMessages(activeChatId.value)
+      
+    } else {
+      console.error('语音处理失败:', response.status)
+      ElMessage.error('语音处理失败，请重试')
+    }
+    
+  } catch (error: any) {
+    console.error('语音处理异常:', error)
+    ElMessage.error('语音处理失败: ' + (error?.message || '未知错误'))
+  } finally {
+    isAiReplying.value = false
+  }
 }
 
 // 角色数据缓存
