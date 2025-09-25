@@ -2,6 +2,7 @@ package com.aichat.roleplay.controller;
 
 import com.aichat.roleplay.common.ApiResponse;
 import com.aichat.roleplay.context.UserContext;
+import com.aichat.roleplay.dto.ChatVO;
 import com.aichat.roleplay.dto.CreateChatRequest;
 import com.aichat.roleplay.model.Chat;
 import com.aichat.roleplay.model.User;
@@ -63,13 +64,14 @@ public class ChatController {
      * 获取用户的所有聊天会话
      */
     @GetMapping
-    public ApiResponse<List<Chat>> getUserChats() {
+    public ApiResponse<List<ChatVO>> getUserChats() {
         User user = getCurrentUser();
         log.debug("获取用户聊天会话列表，用户: {}", user.getUsername());
 
         try {
             List<Chat> chats = chatService.getUserChats(user.getId());
-            return ApiResponse.success("获取聊天会话列表成功", chats);
+            List<ChatVO> chatsVO = ChatVO.po2voList(chats);
+            return ApiResponse.success("获取聊天会话列表成功", chatsVO);
 
         } catch (Exception e) {
             log.error("获取聊天会话列表失败", e);
