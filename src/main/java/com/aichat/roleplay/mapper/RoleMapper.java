@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 角色数据访问层接口
@@ -50,4 +51,12 @@ public interface RoleMapper extends BaseMapper<Role> {
      */
     @Select("SELECT COUNT(*) > 0 FROM roles WHERE name = #{name} AND deleted = 0")
     boolean existsByName(@Param("name") String name);
+    /**
+     * 根据ID查询角色
+     *
+     * @param roleId 角色ID
+     * @return 角色对象
+     */
+    @Select("SELECT * FROM roles WHERE id = #{roleId} AND deleted = 0")
+    Role findById(Long roleId);
 }

@@ -295,28 +295,80 @@ const handleSend = async () => {
     isSending.value = true
     isAiReplying.value = true
     
-    const response = await messageAPI.sendMessage({
+    // 创建用户消息对象
+    const userMessage = {
+      id: Date.now(), // 临时ID
       chatId: currentChatId.value,
-      content: messageContent
-    })
+      senderType: 'user',
+      content: messageContent,
+      sentAt: new Date().toISOString()
+    } as Message
     
-    if (response.data) {
-      // 添加用户消息
-      messages.value.push(response.data.userMessage)
+    // 添加用户消息到列表
+    messages.value.push(userMessage)
+    await nextTick()
+    scrollToBottom()
+    
+    // 使用SSE流式发送消息，roleId先传1
+    const eventSource = messageAPI.sendMessageToStream(currentChatId.value, 1, messageContent)
+    
+    let aiResponse = ''
+    let aiMessageId = Date.now() + 1
+    
+    // 创建AI消息对象（初始为空）
+    const aiMessage = {
+      id: aiMessageId,
+      chatId: currentChatId.value,
+      senderType: 'ai',
+      content: '',
+      sentAt: new Date().toISOString()
+    } as Message
+    
+    // 添加AI消息到列表（初始为空）
+    messages.value.push(aiMessage)
+    
+    // 处理SSE事件
+    eventSource.onmessage = (event) => {
+      console.log('Received SSE message:', event.data)
       
-      // 如果有AI回复，直接添加（非SSE模式）
-      if (response.data.aiMessage && !sseConnection?.isConnected) {
-        messages.value.push(response.data.aiMessage)
+      // 检查是否是完成标记
+      if (event.data === '[DONE]') {
+        eventSource.close()
         isAiReplying.value = false
+        isSending.value = false
+      } else if (event.data === '[ERROR]') {
+        eventSource.close()
+        ElMessage.error('AI回复生成失败')
+        isAiReplying.value = false
+        isSending.value = false
+      } else {
+        // 处理流式数据
+        const chunk = event.data.replace('data: ', '')
+        if (chunk.trim()) {
+          aiResponse += chunk
+          
+          // 更新AI消息内容
+          const messageIndex = messages.value.findIndex(msg => msg.id === aiMessageId)
+          if (messageIndex !== -1) {
+            messages.value[messageIndex].content = aiResponse
+          }
+          
+          nextTick(() => scrollToBottom())
+        }
       }
-      
-      await nextTick()
-      scrollToBottom()
     }
+    
+    eventSource.onerror = (error) => {
+      console.error('SSE连接错误:', error)
+      eventSource.close()
+      ElMessage.error('SSE连接失败')
+      isAiReplying.value = false
+      isSending.value = false
+    }
+    
   } catch (error) {
     ElMessage.error('发送消息失败')
     isAiReplying.value = false
-  } finally {
     isSending.value = false
   }
 }

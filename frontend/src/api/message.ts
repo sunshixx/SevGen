@@ -31,6 +31,14 @@ export const messageAPI = {
   // 标记消息为已读
   markMessagesAsRead: (chatId: number): Promise<ApiResponse> => {
     return request.put(`/messages/chat/${chatId}/read`)
+  },
+
+  // 发送消息到SSE流
+  sendMessageToStream: (chatId: number, roleId: number, userMessage: string): EventSource => {
+    const token = localStorage.getItem('token')
+    // 使用相对路径，让请求通过Vite代理转发到后端
+    const url = `/api/sse/stream?chatId=${chatId}&roleId=${roleId}&userMessage=${encodeURIComponent(userMessage)}&token=${token}`
+    return new EventSource(url)
   }
 }
 

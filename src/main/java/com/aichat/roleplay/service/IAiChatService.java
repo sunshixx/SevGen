@@ -13,8 +13,8 @@ public interface IAiChatService {
      * @param chatHistory 聊天历史（可选）
      * @return AI回复内容
      */
-    String generateRoleResponse(String rolePrompt, String userMessage, String chatHistory);
-
+//    String generateRoleResponse(String rolePrompt, String userMessage, String chatHistory);
+//
     /**
      * 生成角色化的回复
      *
