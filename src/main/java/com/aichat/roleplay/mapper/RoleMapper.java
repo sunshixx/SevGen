@@ -50,4 +50,7 @@ public interface RoleMapper extends BaseMapper<Role> {
      */
     @Select("SELECT COUNT(*) > 0 FROM roles WHERE name = #{name} AND deleted = 0")
     boolean existsByName(@Param("name") String name);
+
+    @Select("SELECT * FROM roles WHERE id = #{roleId} AND deleted = 0")
+    Role findById(Long roleId);
 }

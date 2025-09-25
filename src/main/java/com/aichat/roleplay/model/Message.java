@@ -1,6 +1,7 @@
 package com.aichat.roleplay.model;
 
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
  * 遵循SOLID原则中的单一职责原则
  * 使用MyBatis-Plus注解进行ORM映射
  */
+@Data
 @TableName("messages")
 public class Message implements Serializable {
 
@@ -26,6 +28,9 @@ public class Message implements Serializable {
      */
     @TableField("chat_id")
     private Long chatId;
+
+    @TableField("role_id")
+    private Long roleId;
 
     /**
      * 发送者类型：user 或 ai
@@ -67,8 +72,9 @@ public class Message implements Serializable {
     // Constructors
     public Message() {}
 
-    public Message(Long chatId, String senderType, String content) {
+    public Message(Long chatId, Long roleId,String senderType, String content) {
         this.chatId = chatId;
+        this.roleId = roleId;
         this.senderType = senderType;
         this.content = content;
         this.isRead = false;

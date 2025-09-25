@@ -1,7 +1,9 @@
 package com.aichat.roleplay.config;
 
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,17 +35,17 @@ public class LangChain4jConfig {
     @Value("${langchain4j.open-ai.text-to-speech-model.voice:alloy}")
     private String ttsVoice;
 
+
     @Bean
-    public ChatLanguageModel chatLanguageModel() {
-        return OpenAiChatModel.builder()
+    public StreamingChatLanguageModel streamingChatLanguageModel() {
+        return OpenAiStreamingChatModel.builder()
                 .baseUrl(chatBaseUrl)
                 .apiKey(chatApiKey)
                 .modelName(chatModelName)
                 .temperature(temperature)
                 .timeout(Duration.ofSeconds(60))
-                .maxRetries(3)
                 .build();
-    }
+
 
     @Bean
     public RestTemplate restTemplate() {
