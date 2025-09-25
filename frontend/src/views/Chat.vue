@@ -38,6 +38,7 @@
         <div class="active-card-header">
           <div class="ai-avatar large" :style="{ backgroundColor: getRoleColor(activeChat.roleId) }">
             <span>{{ getRoleName(activeChat.roleId)[0] || 'A' }}</span>
+
           </div>
           <div class="chat-info">
             <div class="chat-title">{{ getRoleName(activeChat.roleId) }}</div>
@@ -166,6 +167,7 @@ const isAiReplying = ref(false)
 
 // 消息列表引用，用于滚动控制
 const messagesContainer = ref<HTMLElement | null>(null)
+
 
 // 语音输入状态
 const isRecording = ref(false)
@@ -424,6 +426,7 @@ const sendMessage = async () => {
 // 发送消息到指定聊天 - 使用同步API，简单可靠
 const sendMessageToChat = async (chatId: number, content: string) => {
   try {
+
     isAiReplying.value = true
     
     // 立即显示用户消息（临时消息，避免用户看不到自己发的内容）
@@ -549,7 +552,8 @@ const deleteChat = async (chatId: number) => {
       ElMessage.error('删除对话失败')
     }
   }
-}
+)
+
 
 // 加载聊天列表
 const loadChatList = async () => {
@@ -668,7 +672,8 @@ const loadRole = async (roleId: number) => {
     console.error(`加载角色信息失败: ID=${roleId}`, error)
     return null
   }
-}
+})
+
 
 // 加载消息列表
 const loadMessages = async (chatId: number) => {
@@ -788,6 +793,7 @@ watch(activeChatId, (newChatId) => {
 
 .side-card-content {
   flex: 1;
+
 }
 
 .side-card-content .chat-title {
@@ -825,6 +831,7 @@ watch(activeChatId, (newChatId) => {
   align-items: center;
   justify-content: center;
   padding: 40px;
+
 }
 
 .active-chat-card {
@@ -841,6 +848,7 @@ watch(activeChatId, (newChatId) => {
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
   animation: slideIn 0.5s ease-out;
 }
+
 
 @keyframes slideIn {
   from {
@@ -893,11 +901,13 @@ watch(activeChatId, (newChatId) => {
   display: flex;
   gap: 12px;
   align-items: flex-start;
+
 }
 
 .message-item.ai {
   align-self: flex-start;
 }
+
 
 .message-item.user {
   align-self: flex-end;
@@ -952,6 +962,7 @@ watch(activeChatId, (newChatId) => {
   font-size: 14px;
   outline: none;
   transition: all 0.3s ease;
+
 }
 
 .message-input::placeholder {
@@ -962,6 +973,7 @@ watch(activeChatId, (newChatId) => {
   background: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.4);
 }
+
 
 .send-btn, .voice-btn {
   width: 44px;
@@ -980,6 +992,7 @@ watch(activeChatId, (newChatId) => {
 .voice-btn {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
+
 }
 
 .voice-btn.active {
@@ -992,6 +1005,7 @@ watch(activeChatId, (newChatId) => {
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
+
 
 .send-btn:hover:not(:disabled), .voice-btn:hover {
   transform: scale(1.1);
@@ -1025,6 +1039,7 @@ watch(activeChatId, (newChatId) => {
   width: 40px;
   height: 40px;
   border-radius: 50%;
+
   display: flex;
   align-items: center;
   justify-content: center;
