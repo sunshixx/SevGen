@@ -38,10 +38,28 @@ export const messageAPI = {
     const token = localStorage.getItem('token')
     const baseURL = import.meta.env.DEV ? 'http://localhost:16999' : ''
     
+    // 添加类型检查和转换，确保roleId是有效的数字
+    let validRoleId: string
+    if (typeof roleId === 'number') {
+      validRoleId = roleId.toString()
+    } else if (typeof roleId === 'string') {
+      // 尝试将字符串转换为数字
+      const numRoleId = parseInt(roleId, 10)
+      if (!isNaN(numRoleId)) {
+        validRoleId = numRoleId.toString()
+      } else {
+        console.error('无效的roleId:', roleId)
+        validRoleId = '0' // 默认值，避免请求失败
+      }
+    } else {
+      console.error('roleId类型错误:', typeof roleId)
+      validRoleId = '0' // 默认值
+    }
+    
     // 构建查询参数
     const params = new URLSearchParams({
       chatId: chatId.toString(),
-      roleId: roleId.toString(),
+      roleId: validRoleId,
       userMessage: userMessage
     })
     
