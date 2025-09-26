@@ -1,0 +1,13 @@
+# 技术暴露类关键词
+算法
+代码
+程序错误
+系统故障
+数据库
+API接口
+模型训练
+训练数据
+neural network
+machine learning
+深度学习
+algorithm
