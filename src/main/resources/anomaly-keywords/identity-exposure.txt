@@ -1,0 +1,42 @@
+# 身份暴露类关键词 (UTF-8编码) - 只检测明确的AI身份暴露
+# 每行一个关键词，#开头的行为注释
+# 注：巧妙的角色扮演回避（如历史人物身份）不应触发此检测
+
+# 直接承认AI身份的表述
+我是AI
+我是人工智能
+我是机器人
+我是程序
+我是助手
+我是语言模型
+我是人工智能助手
+我是GPT
+我是ChatGPT
+我是LLM
+我是Claude
+
+# 英文AI身份暴露
+as an AI
+I am an AI
+I am artificial intelligence
+I'm an AI
+I'm artificial intelligence
+I am GPT
+I am ChatGPT
+I am Claude
+
+# 技术术语直接暴露
+语言模型
+人工智能助手
+大语言模型
+large language model
+artificial intelligence assistant
+AI assistant
+
+# 模型名称直接暴露（完整匹配避免误判）
+GPT-3
+GPT-4
+ChatGPT
+Claude-3
+gpt-3.5
+gpt-4
