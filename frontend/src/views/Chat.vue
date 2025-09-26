@@ -823,73 +823,71 @@ const sendMessageToChat = async (chatId: number, content: string) => {
       // 监听SSE事件
       eventSource.onmessage = (event) => {
         try {
-          const data = event.data.trim()
-          console.log('收到SSE数据:', data)
-          
-          // 解析数据：你的后端发送的格式是 "data: token"
-          if (data.startsWith('data: ')) {
-            const token = data.substring(6) // 移除 "data: " 前缀
-            
+          // 支持多行 data，逐行处理
+          const lines = event.data.split('\n')
+          for (const line of lines) {
+            const data = line.trim()
+            if (!data) continue
+            console.log('收到SSE数据:', data)
+            let token = data
+            // 兼容 "data: " 前缀
+            if (token.startsWith('data: ')) {
+              token = token.substring(6)
+            }
+            // 处理特殊 token
             if (token === '[DONE]') {
-              // AI回复完成
-              console.log('AI回复完成，累积内容长度:', aiResponse.length)
-              
-              // 移除临时消息，重新加载完整列表
-              
-              // 重新加载完整的消息列表（包含数据库中保存的真实消息）
-              loadMessages(chatId)
-              
-              eventSource.close()
-              isAiReplying.value = false
-              ElMessage.success('消息发送成功')
-              resolve() // 成功完成
-              
-            } else if (token === '[ERROR]') {
-              // AI回复出错
-              console.error('AI回复出错')
-              ElMessage.error('AI回复异常，请重试')
-              eventSource.close()
-              isAiReplying.value = false
-              reject(new Error('AI回复异常'))
-              
-            } else {
-              // 累积AI回复token
-              aiResponse += token
-              
-              // 创建或更新临时AI消息用于实时显示
-              if (!tempAiMessage) {
-                tempAiMessage = {
-                  id: Date.now() + 1, // 确保与用户消息ID不同
+              // 在刷新数据库消息前，先将流式累积内容保存为一条AI消息
+              if (aiResponse.trim()) {
+                const finalAiMessage: Message = {
+                  id: Date.now() + 2,
                   chatId: chatId,
                   content: aiResponse,
                   senderType: 'ai',
                   sentAt: new Date().toISOString(),
                   isRead: false
                 }
-                
-                // 添加临时AI消息到列表
+                const currentMessages = allMessages.value.get(chatId) || []
+                allMessages.value.set(chatId, [...currentMessages, finalAiMessage])
+                scrollToBottom()
+              }
+              loadMessages(chatId)
+              eventSource.close()
+              isAiReplying.value = false
+              ElMessage.success('消息发送成功')
+              resolve()
+            } else if (token === '[ERROR]') {
+              ElMessage.error('AI回复异常，请重试')
+              eventSource.close()
+              isAiReplying.value = false
+              reject(new Error('AI回复异常'))
+            } else if (token.startsWith('[RETRY]')) {
+              ElMessage.info('AI正在重新生成答案...')
+            } else if (token.startsWith('[ERROR] ')) {
+              ElMessage.error(token.replace('[ERROR] ', ''))
+            } else {
+              aiResponse += token
+              if (!tempAiMessage) {
+                tempAiMessage = {
+                  id: Date.now() + 1,
+                  chatId: chatId,
+                  content: aiResponse,
+                  senderType: 'ai',
+                  sentAt: new Date().toISOString(),
+                  isRead: false
+                }
                 const currentMessages = allMessages.value.get(chatId) || []
                 allMessages.value.set(chatId, [...currentMessages, tempAiMessage])
-                
               } else {
-                // 更新现有临时AI消息的内容
-                if (tempAiMessage) {
-                  tempAiMessage.content = aiResponse
-                  
-                  // 触发响应式更新
-                  const currentMessages = allMessages.value.get(chatId) || []
-                  const updatedMessages = currentMessages.map(msg => 
-                    msg.id === tempAiMessage!.id ? { ...tempAiMessage! } : msg
-                  )
-                  allMessages.value.set(chatId, updatedMessages)
-                }
+                tempAiMessage.content = aiResponse
+                const currentMessages = allMessages.value.get(chatId) || []
+                const updatedMessages = currentMessages.map(msg => 
+                  msg.id === tempAiMessage!.id ? { ...tempAiMessage! } : msg
+                )
+                allMessages.value.set(chatId, updatedMessages)
               }
-              
-              // 滚动到最新消息
               scrollToBottom()
             }
           }
-          
         } catch (error) {
           console.error('处理SSE消息失败:', error, event.data)
           reject(error)
