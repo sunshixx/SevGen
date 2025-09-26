@@ -1,5 +1,8 @@
 package com.aichat.roleplay.service;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * AI聊天服务接口
  */
@@ -32,7 +35,7 @@ public interface IAiChatService {
      * @param userMessage 用户消息
      * @param callback    回调函数处理流式响应
      */
-    void generateStreamResponse(String rolePrompt, String userMessage, StreamResponseCallback callback);
+    void generateStreamResponse(String rolePrompt, List<Map<String, String>> userMessage, StreamResponseCallback callback);
 
     /**
      * 流式响应回调接口

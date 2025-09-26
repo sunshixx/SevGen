@@ -12,7 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class SseService {
@@ -30,6 +33,8 @@ public class SseService {
     @Resource
     private MessageMapper messageMapper;
 
+
+
     public SseEmitter stream(Long chatId, Long roleId, String userMessage) {
         log.info("SSE流式对话请求 - chatId: {}, roleId: {}, userMessage: {}", chatId, roleId, userMessage.substring(0, Math.min(50, userMessage.length())));
         
@@ -42,7 +47,7 @@ public class SseService {
             List<Message> chatHistory = messageService.findByChatId(chatId);
 
             // 拼接上下文
-            String context = buildChatContext(chatHistory, userMessage);
+            List<Map<String, String>> context = buildChatContext(chatHistory, userMessage);
 
             // 1. 保存用户消息 - 使用Builder模式明确指定字段
             Message userMsg = Message.builder()
@@ -110,16 +115,29 @@ public class SseService {
     /**
      * 拼接聊天上下文（历史消息 + 最新用户消息）
      */
-    private String buildChatContext(List<Message> history, String userMessage) {
-        StringBuilder context = new StringBuilder();
+    /**
+     * 拼接聊天上下文（历史消息 + 最新用户消息），返回结构化数据
+     */
+    private List<Map<String, String>> buildChatContext(List<Message> history, String userMessage) {
+        List<Map<String, String>> context = new ArrayList<>();
+
         if (history != null) {
             for (Message msg : history) {
-                context.append("[").append(msg.getSenderType()).append("]: ")
-                        .append(msg.getContent()).append("\n");
+                Map<String, String> item = new HashMap<>();
+                // senderType 转换成大模型可识别的角色
+                String role = "user".equals(msg.getSenderType()) ? "user" : "assistant";
+                item.put("role", role);
+                item.put("content", msg.getContent());
+                context.add(item);
             }
         }
-        // 拼接最新的用户输入
-        context.append("[user]: ").append(userMessage).append("\n");
-        return context.toString();
+
+        // 拼接最新用户输入
+        Map<String, String> userMsg = new HashMap<>();
+        userMsg.put("role", "user");
+        userMsg.put("content", userMessage);
+        context.add(userMsg);
+
+        return context;
     }
 }

@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * AI聊天服务实现类
@@ -47,7 +48,7 @@ public class AiChatServiceImpl implements IAiChatService {
      * @param chatHistory 聊天历史
      * @return 完整提示词
      */
-    private String buildRolePrompt(String rolePrompt, String userMessage, String chatHistory) {
+    private String buildRolePrompt(String rolePrompt, List<Map<String, String>> userMessage, String chatHistory) {
         StringBuilder promptBuilder = new StringBuilder();
 
         // 添加角色设定
@@ -100,7 +101,7 @@ public class AiChatServiceImpl implements IAiChatService {
     }
 
     @Override
-    public void generateStreamResponse(String rolePrompt, String userMessage, StreamResponseCallback callback) {
+    public void generateStreamResponse(String rolePrompt, List<Map<String, String>> userMessage, StreamResponseCallback callback) {
         log.debug("开始流式生成AI回复");
 
         StringBuilder aiAnswer = new StringBuilder();
