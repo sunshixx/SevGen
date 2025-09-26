@@ -12,12 +12,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.List;
+
 @Service
 public class SseService {
     private static final Logger log = LoggerFactory.getLogger(SseService.class);
     
     @Autowired
     private IAiChatService aiChatService;
+
+    @Autowired
+    private IMessageService messageService;
     @Resource
     private RoleMapper roleMapper;
     @Resource
@@ -34,6 +39,11 @@ public class SseService {
         SseEmitter emitter = new SseEmitter();
 
         try {
+            List<Message> chatHistory = messageService.findByChatId(chatId);
+
+            // 拼接上下文
+            String context = buildChatContext(chatHistory, userMessage);
+
             // 1. 保存用户消息 - 使用Builder模式明确指定字段
             Message userMsg = Message.builder()
                     .chatId(chatId)
@@ -46,6 +56,8 @@ public class SseService {
             messageMapper.insert(userMsg);
             log.info("用户消息插入成功，ID: {}", userMsg.getId());
 
+
+
             // 2. 获取角色 Prompt
             Role role = roleMapper.findById(roleId);
             if(role == null){
@@ -57,8 +69,9 @@ public class SseService {
             StringBuilder aiAnswer = new StringBuilder();
 
             // 4. 调用 AI 流式输出
-            aiChatService.generateStreamResponse(rolePrompt, userMessage, token -> {
+            aiChatService.generateStreamResponse(rolePrompt, context, token -> {
                 try {
+                    log.debug("SSE发送数据: {}", token);
                     emitter.send("data: " + token + "\n\n");
                     if ("[DONE]".equals(token)) {
                         // 回复完成，保存到数据库
@@ -93,5 +106,20 @@ public class SseService {
         }
 
         return emitter;
+    }
+    /**
+     * 拼接聊天上下文（历史消息 + 最新用户消息）
+     */
+    private String buildChatContext(List<Message> history, String userMessage) {
+        StringBuilder context = new StringBuilder();
+        if (history != null) {
+            for (Message msg : history) {
+                context.append("[").append(msg.getSenderType()).append("]: ")
+                        .append(msg.getContent()).append("\n");
+            }
+        }
+        // 拼接最新的用户输入
+        context.append("[user]: ").append(userMessage).append("\n");
+        return context.toString();
     }
 }

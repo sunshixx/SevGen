@@ -30,7 +30,7 @@ public class MessageServiceImpl implements IMessageService {
     private final MessageMapper messageMapper;
     private final ChatMapper chatMapper;
     private final IAiChatService aiChatService;
-    private final SseService sseService;
+
 
     /**
      * 构造函数注入，遵循依赖倒置原则
@@ -38,12 +38,12 @@ public class MessageServiceImpl implements IMessageService {
     @Autowired
     public MessageServiceImpl(MessageMapper messageMapper,
                               ChatMapper chatMapper,
-                              IAiChatService aiChatService,
-                              SseService sseService) {
+                              IAiChatService aiChatService
+                             ) {
         this.messageMapper = messageMapper;
         this.chatMapper = chatMapper;
         this.aiChatService = aiChatService;
-        this.sseService = sseService;
+
     }
 
     @Override
@@ -208,5 +208,11 @@ public class MessageServiceImpl implements IMessageService {
         } else {
             throw new RuntimeException("语音消息保存失败");
         }
+    }
+
+    @Override
+    public List<Message> findByChatId(Long chatId) {
+
+        return messageMapper.findByChatIdPage(chatId, null, 20);
     }
 }

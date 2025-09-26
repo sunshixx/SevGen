@@ -105,4 +105,6 @@ public interface IMessageService {
      */
     Message saveVoiceMessage(Long chatId, Long roleId, String senderType, String content,
                            String audioUrl, String transcribedText, Integer audioDuration);
+
+    List<Message> findByChatId(Long chatId);
 }
