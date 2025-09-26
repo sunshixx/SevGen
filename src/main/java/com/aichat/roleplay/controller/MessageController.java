@@ -53,7 +53,7 @@ public class MessageController {
 
             // 获取分页消息列表
             List<Message> messages = messageMapper.findByChatIdPage(chatId, lastMessageId, pageSize);
-
+            log.info("获取分页消息列表成功，: {},用户：{},chatId:{}", messages,user.getId(),chatId);
             // 标记消息为已读（仅当前用户）
             messageMapper.markAllAsReadByChatId(chatId);
 
