@@ -14,18 +14,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class SseService {
     private static final Logger log = LoggerFactory.getLogger(SseService.class);
-    
+
     @Autowired private IAiChatService aiChatService;
     @Autowired private IMessageService messageService;
     @Autowired private IReflectionAgentService reflectionAgentService;
     @Autowired private IReflectionLogService reflectionLogService;
     @Autowired private RolePromptEngineering rolePromptEngineering;
-    
+
     @Resource private RoleMapper roleMapper;
     @Resource private ChatMapper chatMapper;
     @Resource private MessageMapper messageMapper;
@@ -33,6 +36,7 @@ public class SseService {
     public SseEmitter stream(Long chatId, Long roleId, String userMessage) {
         return streamWithReflection(chatId, roleId, userMessage, 0);
     }
+
     // 主流式对话入口
     private SseEmitter streamWithReflection(Long chatId, Long roleId, String originalUserMessage, int currentRetryCount) {
         log.info("SSE流式对话 - chatId:{}, roleId:{}, retry:{}", chatId, roleId, currentRetryCount);
@@ -42,7 +46,6 @@ public class SseService {
             String actualUserMessage = extractActualUserMessage(originalUserMessage);
             List<Message> chatHistory = messageService.findByChatId(chatId);
 
-            // 保存用户消息
             Message userMsg = Message.builder()
                     .chatId(chatId).roleId(roleId)
                     .senderType("user").content(actualUserMessage).build();
@@ -53,9 +56,10 @@ public class SseService {
 
             StringBuilder aiAnswer = new StringBuilder();
             String optimizedPrompt = rolePromptEngineering.buildOptimizedPrompt(role, actualUserMessage, buildChatHistory(chatHistory));
-            
+
             aiChatService.generateStreamResponseDirect(optimizedPrompt, token -> {
                 try {
+                    log.debug("SSE发送数据: {}", token);
                     if ("[DONE]".equals(token)) {
                         String cleanedResponse = cleanAiResponse(aiAnswer.toString(), actualUserMessage);
                         emitter.send("data: " + token + "\n\n");
@@ -71,7 +75,7 @@ public class SseService {
                     emitter.completeWithError(e);
                 }
             });
-            
+
         } catch (Exception e) {
             log.error("SSE处理失败", e);
             try {
@@ -83,12 +87,12 @@ public class SseService {
         }
         return emitter;
     }
-    
+
     // 反思分析处理
     private void handleAiResponseComplete(SseEmitter emitter, Long chatId, Long roleId, String originalQuery, String aiResponse, int retryCount) {
         try {
             ReflectionResult result = reflectionAgentService.reflect(originalQuery, aiResponse, chatId, roleId, retryCount);
-            
+
             if (result.needsRetry()) {
                 if (result.getRetryCount() >= 3) {
                     saveAiMessage(chatId, roleId, aiResponse);
@@ -96,14 +100,12 @@ public class SseService {
                     emitter.complete();
                     return;
                 }
-                
-                // 记录失败日志
                 Long userId = getCurrentUserId(chatId);
                 reflectionLogService.saveReflectionLog(chatId, roleId, userId, originalQuery, aiResponse, result, 0);
-                
+
                 emitter.send("data: [RETRY] 重新生成中...\n\n");
                 performRetry(emitter, chatId, roleId, result.getRegeneratedQuery(), result.getRetryCount());
-                
+
             } else if (result.isSuccess()) {
                 saveAiMessage(chatId, roleId, aiResponse);
                 emitter.complete();
@@ -119,7 +121,7 @@ public class SseService {
             emitter.completeWithError(e);
         }
     }
-    
+
     // 保存AI消息
     private void saveAiMessage(Long chatId, Long roleId, String aiResponse) {
         try {
@@ -138,10 +140,10 @@ public class SseService {
             String cleanedQuery = extractActualUserMessage(retryQuery);
             List<Message> chatHistory = messageService.findByChatId(chatId);
             Role role = roleMapper.findById(roleId);
-            
+
             StringBuilder newAiAnswer = new StringBuilder();
             String optimizedPrompt = rolePromptEngineering.buildOptimizedPrompt(role, cleanedQuery, buildChatHistory(chatHistory));
-            
+
             aiChatService.generateStreamResponseDirect(optimizedPrompt, token -> {
                 try {
                     if ("[DONE]".equals(token)) {
@@ -171,6 +173,7 @@ public class SseService {
             return null;
         }
     }
+
     // 提取真实用户消息
     private String extractActualUserMessage(String message) {
         String cleaned = message;
@@ -188,7 +191,7 @@ public class SseService {
                      .replaceAll("\\s+", " ").trim();
     }
 
-    // 构建聊天历史
+    // 构建聊天历史（用于 prompt）
     private String buildChatHistory(List<Message> history) {
         if (history == null || history.isEmpty()) return null;
         StringBuilder sb = new StringBuilder();

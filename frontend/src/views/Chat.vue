@@ -72,9 +72,14 @@
                 <span v-else>{{ getRoleName(activeChat.roleId)[0] }}</span>
               </div>
               
-              <!-- 文本消息 -->
+              <!-- 文本消息 - 为AI消息添加Markdown渲染 -->
               <div v-if="message.messageType === 'text' || !message.messageType" class="message-content text-message">
-                {{ message.content }}
+                <template v-if="message.senderType === 'ai'">
+                  <div v-html="renderMarkdown(message.content)"></div>
+                </template>
+                <template v-else>
+                  {{ message.content }}
+                </template>
               </div>
             
             <!-- 语音消息 -->
@@ -226,6 +231,7 @@ import { chatAPI, messageAPI, roleAPI } from '@/api'
 import { SSEConnection } from '@/api/message'
 import type { Chat, Message, Role } from '@/types'
 import { formatRelativeTime, formatMessageTime, shouldShowTimeLabel } from '@/utils/dateUtils'
+import { renderMarkdownWithHighlight as renderMarkdown } from '@/utils/markdownWithHighlight'
 
 const route = useRoute()
 const router = useRouter()
@@ -1683,6 +1689,88 @@ watch(activeChatId, (newChatId) => {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
+}
+
+/* Markdown内容样式增强 */
+.text-message :deep(h1),
+.text-message :deep(h2),
+.text-message :deep(h3),
+.text-message :deep(h4),
+.text-message :deep(h5),
+.text-message :deep(h6) {
+  color: white;
+  font-weight: 600;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.text-message :deep(h1) {
+  font-size: 1.5em;
+}
+
+.text-message :deep(h2) {
+  font-size: 1.3em;
+}
+
+.text-message :deep(h3) {
+  font-size: 1.1em;
+}
+
+.text-message :deep(p) {
+  margin: 4px 0;
+  line-height: 1.6;
+}
+
+.text-message :deep(ul),
+.text-message :deep(ol) {
+  margin: 4px 0 4px 16px;
+  padding-left: 16px;
+}
+
+.text-message :deep(li) {
+  margin: 2px 0;
+}
+
+.text-message :deep(strong),
+.text-message :deep(b) {
+  font-weight: 600;
+}
+
+.text-message :deep(em),
+.text-message :deep(i) {
+  font-style: italic;
+}
+
+.text-message :deep(code) {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+}
+
+.text-message :deep(pre) {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.text-message :deep(pre code) {
+  background: transparent;
+  padding: 0;
+}
+
+.text-message :deep(a) {
+  color: #a78bfa;
+  text-decoration: underline;
+}
+
+.text-message :deep(blockquote) {
+  border-left: 3px solid #a78bfa;
+  padding-left: 12px;
+  margin: 8px 0;
+  opacity: 0.9;
 }
 
 /* 语音消息样式 */
