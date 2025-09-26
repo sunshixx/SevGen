@@ -112,6 +112,7 @@ public class AiChatServiceImpl implements IAiChatService {
             List<ChatMessage> messages = List.of(
                     UserMessage.from(fullPrompt)
             );
+            log.info("传给llm的信息："+messages);
 
             streamingChatLanguageModel.generate(messages, new StreamingResponseHandler<AiMessage>() {
                 @Override
