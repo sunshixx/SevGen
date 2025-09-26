@@ -43,7 +43,7 @@ langchain4j:
   open-ai:
     chat-model:
       base-url: https://openai.qiniu.com/v1
-      api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
+      api-key: ${OPENAI_API_KEY:sk-fb99ac27045ca502f250f8802e24f120b4afae888a3bfddfb0258694df99fd25}
       model-name: deepseek/deepseek-v3.1-terminus
       max-tokens: 4096
       temperature: 0.2
@@ -51,13 +51,13 @@ langchain4j:
     # 语音转文字模型配置
     speech-to-text-model:
       base-url: https://openai.qiniu.com/v1
-      api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
+      api-key: ${OPENAI_API_KEY:sk-fb99ac27045ca502f250f8802e24f120b4afae888a3bfddfb0258694df99fd25}
       model-name: ${OPENAI_SPEECH_TO_TEXT_MODEL:asr}
     
     # 文字转语音模型配置  
     text-to-speech-model:
       base-url: https://openai.qiniu.com/v1
-      api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
+      api-key: ${OPENAI_API_KEY:sk-fb99ac27045ca502f250f8802e24f120b4afae888a3bfddfb0258694df99fd25}
       model-name: ${OPENAI_TEXT_TO_SPEECH_MODEL:tts}
       voice: ${OPENAI_TTS_VOICE:alloy}
 
