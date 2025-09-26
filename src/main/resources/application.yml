@@ -45,8 +45,8 @@ langchain4j:
       base-url: https://openai.qiniu.com/v1
       api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
       model-name: deepseek/deepseek-v3.1-terminus
-
-      temperature: 0.7
+      max-tokens: 4096
+      temperature: 0.2
     
     # 语音转文字模型配置
     speech-to-text-model:
@@ -72,3 +72,25 @@ logging:
   level:
     root: INFO
     com.aichat.roleplay: DEBUG
+
+
+reflection:
+  enabled: true
+  max-retry-count: 3
+  reflection-timeout-ms: 30000
+  # 关键词文件路径配置
+  keyword-files:
+    identity-exposure: "anomaly-keywords/identity-exposure.txt"
+    role-breaking: "anomaly-keywords/role-breaking.txt"
+    over-deflection: "anomaly-keywords/over-deflection.txt"
+    technical-exposure: "anomaly-keywords/technical-exposure.txt"
+  # 积极关键词 - 根据具体业务场景可配置，默认为空让检测更通用
+  positive-keywords: []
+  # 异常检测详细配置
+  anomaly-detection:
+    min-response-length: 5
+    max-response-length: 2000
+    check-language-consistency: true
+    check-role-consistency: true
+    anomaly-threshold: 0.2  # 降低阈值，让系统更敏感
+    severe-anomaly-threshold: 0.7  # 降低严重阈值

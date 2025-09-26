@@ -763,155 +763,172 @@ const sendMessage = async () => {
   if (!newMessage.value.trim() || isAiReplying.value) return
   
   const messageContent = newMessage.value.trim()
-  newMessage.value = ''
+  const originalMessage = newMessage.value  // 保存原始消息内容
+  newMessage.value = ''  // 立即清空，给用户及时反馈
   
-  await sendMessageToChat(activeChatId.value, messageContent)
+  try {
+    await sendMessageToChat(activeChatId.value, messageContent)
+    // 发送成功，输入框已经清空，无需额外处理
+  } catch (error) {
+    // 发送失败，恢复输入框内容
+    console.error('发送消息失败:', error)
+    newMessage.value = originalMessage
+    ElMessage.error('发送消息失败，请重试')
+  }
 }
 
 // 发送消息到指定聊天 - 使用SSE流式接口
 const sendMessageToChat = async (chatId: number, content: string) => {
-  try {
-    const chat = chatList.value.find(c => c.id === chatId)
-    if (!chat) {
-      ElMessage.error('聊天会话不存在')
-      return
-    }
+  return new Promise<void>((resolve, reject) => {
+    try {
+      const chat = chatList.value.find(c => c.id === chatId)
+      if (!chat) {
+        ElMessage.error('聊天会话不存在')
+        reject(new Error('聊天会话不存在'))
+        return
+      }
 
-    isAiReplying.value = true
-    
-    // 立即显示用户消息（临时消息，避免用户看不到自己发的内容）
-    const tempUserMessage: Message = {
-      id: Date.now(), // 临时ID
-      chatId: chatId,
-      content: content,
-      senderType: 'user',
-      sentAt: new Date().toISOString(),
-      isRead: false
-    }
-    
-    // 立即添加到消息列表中显示
-    const currentMessages = allMessages.value.get(chatId) || []
-    allMessages.value.set(chatId, [...currentMessages, tempUserMessage])
-    
-    // 自动滚动到底部，让用户看到刚发送的消息
-    scrollToBottom()
-    
-    console.log('开始SSE流式对话:', {
-      chatId,
-      roleId: chat.roleId,
-      content: content.substring(0, 50) + '...'
-    })
-    
-    // 创建SSE连接
-    const eventSource = messageAPI.createStreamConnection(chatId, chat.roleId, content)
-    
-    // 用于累积AI回复的变量
-    let aiResponse = ''
-    let tempAiMessage: Message | null = null
-    
-    // 监听SSE事件
-    eventSource.onmessage = (event) => {
-      try {
-        const data = event.data.trim()
-        console.log('收到SSE数据:', data)
-        
-        // 解析数据：你的后端发送的格式是 "data: token"
-        if (data.startsWith('data: ')) {
-          const token = data.substring(6) // 移除 "data: " 前缀
+      isAiReplying.value = true
+      
+      // 立即显示用户消息（临时消息，避免用户看不到自己发的内容）
+      const tempUserMessage: Message = {
+        id: Date.now(), // 临时ID
+        chatId: chatId,
+        content: content,
+        senderType: 'user',
+        sentAt: new Date().toISOString(),
+        isRead: false
+      }
+      
+      // 立即添加到消息列表中显示
+      const currentMessages = allMessages.value.get(chatId) || []
+      allMessages.value.set(chatId, [...currentMessages, tempUserMessage])
+      
+      // 自动滚动到底部，让用户看到刚发送的消息
+      scrollToBottom()
+      
+      console.log('开始SSE流式对话:', {
+        chatId,
+        roleId: chat.roleId,
+        content: content.substring(0, 50) + '...'
+      })
+      
+      // 创建SSE连接
+      const eventSource = messageAPI.createStreamConnection(chatId, chat.roleId, content)
+      
+      // 用于累积AI回复的变量
+      let aiResponse = ''
+      let tempAiMessage: Message | null = null
+      
+      // 监听SSE事件
+      eventSource.onmessage = (event) => {
+        try {
+          const data = event.data.trim()
+          console.log('收到SSE数据:', data)
           
-          if (token === '[DONE]') {
-            // AI回复完成
-            console.log('AI回复完成，累积内容长度:', aiResponse.length)
+          // 解析数据：你的后端发送的格式是 "data: token"
+          if (data.startsWith('data: ')) {
+            const token = data.substring(6) // 移除 "data: " 前缀
             
-            // 移除临时消息，重新加载完整列表
-            
-            // 重新加载完整的消息列表（包含数据库中保存的真实消息）
-            loadMessages(chatId)
-            
-            eventSource.close()
-            isAiReplying.value = false
-            ElMessage.success('消息发送成功')
-            
-          } else if (token === '[ERROR]') {
-            // AI回复出错
-            console.error('AI回复出错')
-            ElMessage.error('AI回复异常，请重试')
-            eventSource.close()
-            isAiReplying.value = false
-            
-          } else {
-            // 累积AI回复token
-            aiResponse += token
-            
-            // 创建或更新临时AI消息用于实时显示
-            if (!tempAiMessage) {
-              tempAiMessage = {
-                id: Date.now() + 1, // 确保与用户消息ID不同
-                chatId: chatId,
-                content: aiResponse,
-                senderType: 'ai',
-                sentAt: new Date().toISOString(),
-                isRead: false
-              }
+            if (token === '[DONE]') {
+              // AI回复完成
+              console.log('AI回复完成，累积内容长度:', aiResponse.length)
               
-              // 添加临时AI消息到列表
-              const currentMessages = allMessages.value.get(chatId) || []
-              allMessages.value.set(chatId, [...currentMessages, tempAiMessage])
+              // 移除临时消息，重新加载完整列表
+              
+              // 重新加载完整的消息列表（包含数据库中保存的真实消息）
+              loadMessages(chatId)
+              
+              eventSource.close()
+              isAiReplying.value = false
+              ElMessage.success('消息发送成功')
+              resolve() // 成功完成
+              
+            } else if (token === '[ERROR]') {
+              // AI回复出错
+              console.error('AI回复出错')
+              ElMessage.error('AI回复异常，请重试')
+              eventSource.close()
+              isAiReplying.value = false
+              reject(new Error('AI回复异常'))
               
             } else {
-              // 更新现有临时AI消息的内容
-              if (tempAiMessage) {
-                tempAiMessage.content = aiResponse
+              // 累积AI回复token
+              aiResponse += token
+              
+              // 创建或更新临时AI消息用于实时显示
+              if (!tempAiMessage) {
+                tempAiMessage = {
+                  id: Date.now() + 1, // 确保与用户消息ID不同
+                  chatId: chatId,
+                  content: aiResponse,
+                  senderType: 'ai',
+                  sentAt: new Date().toISOString(),
+                  isRead: false
+                }
                 
-                // 触发响应式更新
+                // 添加临时AI消息到列表
                 const currentMessages = allMessages.value.get(chatId) || []
-                const updatedMessages = currentMessages.map(msg => 
-                  msg.id === tempAiMessage!.id ? { ...tempAiMessage! } : msg
-                )
-                allMessages.value.set(chatId, updatedMessages)
+                allMessages.value.set(chatId, [...currentMessages, tempAiMessage])
+                
+              } else {
+                // 更新现有临时AI消息的内容
+                if (tempAiMessage) {
+                  tempAiMessage.content = aiResponse
+                  
+                  // 触发响应式更新
+                  const currentMessages = allMessages.value.get(chatId) || []
+                  const updatedMessages = currentMessages.map(msg => 
+                    msg.id === tempAiMessage!.id ? { ...tempAiMessage! } : msg
+                  )
+                  allMessages.value.set(chatId, updatedMessages)
+                }
               }
+              
+              // 滚动到最新消息
+              scrollToBottom()
             }
-            
-            // 滚动到最新消息
-            scrollToBottom()
           }
+          
+        } catch (error) {
+          console.error('处理SSE消息失败:', error, event.data)
+          reject(error)
         }
-        
-      } catch (error) {
-        console.error('处理SSE消息失败:', error, event.data)
       }
-    }
-    
-    eventSource.onerror = (error) => {
-      console.error('SSE连接错误:', error)
-      ElMessage.error('连接异常，请重试')
-      eventSource.close()
       
-      // 移除临时消息
+      eventSource.onerror = (error) => {
+        console.error('SSE连接错误:', error)
+        ElMessage.error('连接异常，请重试')
+        eventSource.close()
+        
+        // 移除临时消息
+        const messages = allMessages.value.get(chatId) || []
+        const filteredMessages = messages.filter(msg => 
+          msg.id !== tempUserMessage.id && 
+          (tempAiMessage ? msg.id !== tempAiMessage.id : true)
+        )
+        allMessages.value.set(chatId, filteredMessages)
+        
+        isAiReplying.value = false
+        reject(new Error('SSE连接失败'))
+      }
+      
+      eventSource.onopen = () => {
+        console.log('SSE连接已建立')
+      }
+      
+    } catch (error: any) {
+      // 发送失败时移除临时消息
       const messages = allMessages.value.get(chatId) || []
-      const filteredMessages = messages.filter(msg => 
-        msg.id !== tempUserMessage.id && 
-        (tempAiMessage ? msg.id !== tempAiMessage.id : true)
-      )
+      const filteredMessages = messages.filter(msg => msg.id !== Date.now())
       allMessages.value.set(chatId, filteredMessages)
       
+      console.error('发送消息失败:', error)
+      ElMessage.error('发送消息失败，请检查网络连接')
       isAiReplying.value = false
+      reject(error)
     }
-    
-    eventSource.onopen = () => {
-      console.log('SSE连接已建立')
-    }
-    
-  } catch (error: any) {
-    // 发送失败时移除临时消息
-    const messages = allMessages.value.get(chatId) || []
-    const filteredMessages = messages.filter(msg => msg.id !== Date.now())
-    allMessages.value.set(chatId, filteredMessages)
-    
-    console.error('发送消息失败:', error)
-    ElMessage.error('发送消息失败，请检查网络连接')
-    isAiReplying.value = false
-  }
+  })
 }
 
 // 删除聊天对话
