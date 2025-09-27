@@ -67,6 +67,11 @@ file:
     upload-url: ${FILE_UPLOAD_URL:http://111.62.241.115/upload.php}  # 远程上传接口
     base-url: ${FILE_STORAGE_URL:http://111.62.241.115}   # 远程访问地址
 
+# RAG配置
+rag:
+  max-results: 5
+  similarity-threshold: 0.7
+
 # 日志配置
 logging:
   level:

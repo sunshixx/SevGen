@@ -81,8 +81,8 @@ public class SseService {
             CompletableFuture<String> responseFuture = new CompletableFuture<>();
             processWithReflectionSync(chatId, roleId, userMessage, 0, responseFuture, saveMessages);
             
-            // 等待响应完成，最多30秒（优化超时时间）
-            return responseFuture.get(30, TimeUnit.SECONDS);
+            // 等待响应完成，语音场景需要更长时间（语音转文字+AI生成+文字转语音）
+            return responseFuture.get(90, TimeUnit.SECONDS);
             
         } catch (Exception e) {
             log.error("同步获取AI响应失败", e);

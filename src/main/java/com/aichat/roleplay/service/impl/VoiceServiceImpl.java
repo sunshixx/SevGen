@@ -57,28 +57,28 @@ public class VoiceServiceImpl implements VoiceService {
             String aiResponse = null;
             String aiAudioUrl = null;
             
-            // 阶段1：上传用户音频文件
+
             userAudioUrl = fileStorageService.uploadAudioFile(audioFile, audioFile.getOriginalFilename());
             logger.info("用户音频上传完成，URL: " + userAudioUrl);
             
-            // 阶段2：语音转文字
+
             transcribedText = speechToTextWithModel(userAudioUrl, audioFile.getOriginalFilename());
             logger.info("语音转文字完成: " + transcribedText);
             
-            // 保存用户语音消息（包含音频URL和转录文本）
+
             messageService.saveVoiceMessage(chatId, roleId, "user", userAudioUrl, transcribedText, null);
             
-            // 阶段3：AI处理（不在SSE服务中保存消息，避免重复）
+
             aiResponse = processWithAI(chatId, roleId, transcribedText);
             logger.info("AI回复: " + aiResponse);
             
-            // 阶段4：AI回复转语音
+
             byte[] aiAudioBytes = textToSpeechWithModel(aiResponse);
             logger.info("AI语音合成完成，大小: " + aiAudioBytes.length + " bytes");
             
-            // 阶段5：上传AI音频并保存AI消息
+
             try {
-                // 创建临时MultipartFile用于上传AI音频
+
                 String aiFileName = "ai_response_" + System.currentTimeMillis() + ".mp3";
                 aiAudioUrl = fileStorageService.uploadAudioFile(aiAudioBytes, aiFileName, "audio/mpeg");
                 logger.info("AI音频上传完成，URL: " + aiAudioUrl);
