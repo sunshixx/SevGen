@@ -140,18 +140,17 @@ public class VoiceServiceImpl implements VoiceService {
             String aiResponse = null;
             String aiAudioUrl = null;
             
-            // 阶段1：上传用户音频
+
             userAudioUrl = fileStorageService.uploadAudioFile(audioFile, audioFile.getOriginalFilename());
             logger.info("用户音频上传完成，URL: " + userAudioUrl);
             
-            // 阶段2：语音转文字
+
             transcribedText = speechToTextWithModel(userAudioUrl, audioFile.getOriginalFilename());
             logger.info("语音转文字完成: " + transcribedText);
             
-            // 保存用户语音消息
+
             messageService.saveVoiceMessage(chatId, roleId, "user", userAudioUrl, transcribedText, null);
-            
-            // 阶段3：AI对话
+
             aiResponse = processWithAI(transcribedText);
             logger.info("AI回复: " + aiResponse);
             
