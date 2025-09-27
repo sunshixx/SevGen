@@ -17,8 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 @Service
@@ -85,23 +83,7 @@ public class VoiceServiceImpl implements VoiceService {
                 })
             );
 
-//            // 阶段3：基于ASR结果进行AI对话
-//            CompletableFuture<String> aiFuture = asrFuture.thenCompose(transcribedText ->
-//                CompletableFuture.supplyAsync(() -> {
-//                    try {
-//                        long aiStart = System.currentTimeMillis();
-//                        String aiResponse = processWithAI(chat,transcribedText);
-//                        long aiTime = System.currentTimeMillis() - aiStart;
-//                        logger.info("AI处理完成，耗时: " + aiTime + "ms, 结果: " + aiResponse);
-//                        return aiResponse;
-//                    } catch (Exception e) {
-//                        logger.severe("AI处理失败: " + e.getMessage());
-//                        throw new RuntimeException("AI处理失败", e);
-//                    }
-//                })
-//            );
 
-            // 阶段4：基于AI结果进行TTS
             CompletableFuture<byte[]> ttsFuture = asrFuture.thenCompose(aiResponse ->
                 CompletableFuture.supplyAsync(() -> {
                     try {
@@ -117,7 +99,7 @@ public class VoiceServiceImpl implements VoiceService {
                 })
             );
 
-            // 等待所有异步任务完成，设置超时时间
+
             byte[] result = ttsFuture.get(30, TimeUnit.SECONDS);
             
             long totalTime = System.currentTimeMillis() - startTime;
@@ -132,26 +114,23 @@ public class VoiceServiceImpl implements VoiceService {
         }
     }
 
+
     @Override
     public byte[] processVoiceChat(MultipartFile audioFile, Long chatId, Long roleId) {
         try {
             long startTime = System.currentTimeMillis();
             logger.info("开始带消息记录的语音对话处理，聊天ID: " + chatId + ", 角色ID: " + roleId);
-            
-            // 声明变量用于保存中间结果
+
             String userAudioUrl = null;
             String transcribedText = null;
             String aiResponse = null;
             String aiAudioUrl = null;
-            
 
             userAudioUrl = fileStorageService.uploadAudioFile(audioFile, audioFile.getOriginalFilename());
             logger.info("用户音频上传完成，URL: " + userAudioUrl);
-            
 
             transcribedText = speechToTextWithModel(userAudioUrl, audioFile.getOriginalFilename());
             logger.info("语音转文字完成: " + transcribedText);
-            
 
             // 保存用户语音消息（包含转录文本）
             messageService.saveVoiceMessage(chatId, roleId, "user", userAudioUrl, transcribedText, null);
@@ -205,7 +184,7 @@ public class VoiceServiceImpl implements VoiceService {
             headers.set("Authorization", "Bearer " + apiKey);
             headers.setContentType(MediaType.APPLICATION_JSON);
             
-            // 从文件名提取格式
+
             String format = "mp3";
             //保留拓展性，方便以后接入更多格式
 //            if (filename != null) {
@@ -215,7 +194,7 @@ public class VoiceServiceImpl implements VoiceService {
 //                }
 //            }
             
-            // 构建请求体 - 按照七牛云ASR API文档格式
+
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", "asr");
             
@@ -263,8 +242,10 @@ public class VoiceServiceImpl implements VoiceService {
             logger.info("使用SSE服务处理AI对话，输入长度: " + inputText.length() + " 字符");
             long startTime = System.currentTimeMillis();
 
+
             // 调用SSE服务时禁用消息保存，避免重复保存
             String aiResponse = sseService.getAiResponseText(chatId, roleId, inputText, false);
+
             
             long responseTime = System.currentTimeMillis() - startTime;
             logger.info("AI响应耗时: " + responseTime + "ms，回复长度: " + 
@@ -280,7 +261,6 @@ public class VoiceServiceImpl implements VoiceService {
 
     private byte[] textToSpeechWithModel(String text) {
         try {
-            // 正确的API路径：TTS接口路径
             String url = baseUrl + "/voice/tts";
             
             HttpHeaders headers = new HttpHeaders();

@@ -14,15 +14,44 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+
 @Service
 public class SseService {
+    // 获取当前用户ID（通过 chatId 查询）
+    private Long getCurrentUserId(Long chatId) {
+        try {
+            return chatMapper.selectById(chatId).getUserId();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // 提取真实用户消息（去除重试标记和累积提示）
+    private String extractActualUserMessage(String message) {
+        String cleaned = message;
+        // 去除 RETRY 前缀
+        if (cleaned.startsWith("RETRY")) {
+            int spaceIndex = cleaned.indexOf(' ');
+            if (spaceIndex > 0) cleaned = cleaned.substring(spaceIndex + 1);
+        }
+        // 去除 "用户问题：" 前缀
+        if (cleaned.startsWith("用户问题：")) {
+            cleaned = cleaned.substring("用户问题：".length());
+        }
+        // 去除 meta 指令（如“请用更清晰的方式回答”、“[指令]”等）
+        cleaned = cleaned.replaceAll("\\s*\\(请用更.*?回答\\)\\s*", " ")
+                .replaceAll("\\s*请用更.*?回答\\s*", " ")
+                .replaceAll("^用户问题：", "")
+                .replaceAll("^\\[指令].*", "")
+                .replaceAll("\\s+", " ").trim();
+        return cleaned;
+    }
     private static final Logger log = LoggerFactory.getLogger(SseService.class);
 
     @Autowired private IAiChatService aiChatService;
@@ -220,7 +249,10 @@ public class SseService {
 
             if (result.needsRetry()) {
                 if (result.getRetryCount() >= 3) {
-                    saveAiMessage(chatId, roleId, aiResponse);
+                    // 兜底回复
+                    String fallback = "很抱歉，我的思绪飞上了天～请尝试重新提问或稍后再试。";
+                    saveAiMessage(chatId, roleId, fallback);
+                    emitter.send("data: " + fallback + "\n\n");
                     emitter.send("data: [ERROR] 达到最大重试次数\n\n");
                     emitter.complete();
                     return;
@@ -291,40 +323,25 @@ public class SseService {
         }
     }
 
-    private Long getCurrentUserId(Long chatId) {
-        try {
-            return chatMapper.selectById(chatId).getUserId();
-        } catch (Exception e) {
+
+    // 构建结构化且有价值的聊天历史
+    private String buildChatHistory(List<Message> history) {
+        if (history == null || history.isEmpty()){
             return null;
         }
-    }
-
-    // 提取真实用户消息
-    private String extractActualUserMessage(String message) {
-        String cleaned = message;
-        if (cleaned.startsWith("RETRY")) {
-            int spaceIndex = cleaned.indexOf(' ');
-            if (spaceIndex > 0) cleaned = cleaned.substring(spaceIndex + 1);
-        }
-        return removeAccumulatedPrompts(cleaned);
-    }
-
-    // 移除累积的提示词
-    private String removeAccumulatedPrompts(String message) {
-        return message.replaceAll("\\s*\\(请用更.*?回答\\)\\s*", " ")
-                     .replaceAll("\\s*请用更.*?回答\\s*", " ")
-                     .replaceAll("\\s+", " ").trim();
-    }
-
-    // 构建聊天历史（用于 prompt）
-    private String buildChatHistory(List<Message> history) {
-        if (history == null || history.isEmpty()) return null;
         StringBuilder sb = new StringBuilder();
         for (Message msg : history) {
-            String sender = "ai".equals(msg.getSenderType()) ? "AI" : "用户";
-            sb.append(sender).append(": ").append(msg.getContent()).append("\n");
+            // 过滤无意义闲聊（如内容为空、长度极短、仅表情、仅打招呼等）
+            String content = msg.getContent();
+            if (content == null || content.trim().isEmpty()) continue;
+            String lower = content.trim().toLowerCase();
+            if (lower.matches("^(hi|hello|你好|在吗|ok|嗯|哦|哈喽|hello!|hi!|hello。|hi。|hello，|hi，|hello~|hi~|hello。|hi。|hello。|hi。|[\uD83D\uDE00-\uD83D\uDE4F]+)$")) continue;
+            if (content.length() < 2) continue;
+            // 结构化拼接
+            String role = "ai".equals(msg.getSenderType()) ? "ai" : "user";
+            sb.append("role: ").append(role).append(", content: ").append(content.replaceAll("\n", " ")).append("\n");
         }
-        return sb.toString().trim();
+        return sb.length() == 0 ? null : sb.toString().trim();
     }
 
     // 清理AI回复
