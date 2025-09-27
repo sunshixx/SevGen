@@ -1,6 +1,8 @@
 package com.aichat.roleplay.util;
 
 import com.aichat.roleplay.model.Role;
+import com.aichat.roleplay.service.SimpleRagService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -10,6 +12,9 @@ import org.springframework.util.StringUtils;
  */
 @Service
 public class RolePromptEngineering {
+
+    @Autowired
+    private SimpleRagService ragService;
 
     /**
      * 根据角色类型构建优化的prompt
@@ -47,6 +52,13 @@ public class RolePromptEngineering {
         
         // 添加通用的行为规范
         addCommonBehaviorGuidelines(promptBuilder);
+        
+        // 集成RAG检索相关内容
+        String relevantContent = ragService.getRoleRelevantContent(role.getId(), userMessage);
+        if (StringUtils.hasText(relevantContent)) {
+            promptBuilder.append("\n相关知识背景：\n");
+            promptBuilder.append(relevantContent).append("\n");
+        }
         
         // 添加聊天历史
         if (StringUtils.hasText(chatHistory)) {
