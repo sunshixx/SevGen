@@ -143,17 +143,7 @@ public class MessageServiceImpl implements IMessageService {
         return messageMapper.findUnreadByChatId(chatId);
     }
 
-    @Override
-    public void markMessagesAsRead(Long chatId) {
-        log.info("标记消息为已读，聊天ID: {}", chatId);
-        messageMapper.markAllAsReadByChatId(chatId);
-    }
 
-    @Override
-    public void markMessageAsRead(Long messageId) {
-        log.info("标记单条消息为已读，消息ID: {}", messageId);
-        messageMapper.markAsRead(messageId);
-    }
 
     @Override
     @Transactional(readOnly = true)

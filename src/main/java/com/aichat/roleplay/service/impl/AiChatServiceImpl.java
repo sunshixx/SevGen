@@ -89,25 +89,11 @@ public class AiChatServiceImpl implements IAiChatService {
         return promptBuilder.toString();
     }
 
-
-    @Override
-    public String generateRoleResponse(String rolePrompt, String userMessage, String chatHistory) {
-        // 该方法已不再使用，多角色聊天直接调用SseService
-        return "";
-    }
-
     @Override
     public String generateCharacterResponse(String roleName, String characterPrompt, String userMessage) {
         return "";
     }
 
-    @Override
-    public void generateStreamResponse(String rolePrompt, List<Map<String, String>> userMessage, StreamResponseCallback callback) {
-        log.debug("开始流式生成AI回复");
-
-        // 这里应由外部构建完整 prompt 并传入，或通过 RolePromptEngineering 构建
-        callback.onResponse("[ERROR] 未实现：请使用 RolePromptEngineering 构建 prompt 并调用 generateStreamResponseDirect");
-    }
     
     @Override
     public void generateStreamResponseDirect(String fullPrompt, StreamResponseCallback callback) {

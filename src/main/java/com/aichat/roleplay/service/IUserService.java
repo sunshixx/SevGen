@@ -43,12 +43,7 @@ public interface IUserService {
      */
     User updateUser(User user);
 
-    /**
-     * 删除用户
-     *
-     * @param id 用户ID
-     */
-    void deleteUser(Long id);
+
 
     /**
      * 检查用户名是否存在

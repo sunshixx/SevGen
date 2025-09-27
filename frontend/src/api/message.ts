@@ -16,6 +16,15 @@ export const messageAPI = {
     return request.get(`/messages/chat/${chatId}/messages`, { params })
   },
 
+  // 分页获取聊天室消息列表
+  getChatRoomMessages: (chatRoomId: number, lastMessageId?: number, pageSize: number = 20): Promise<ApiResponse<PagedResponse<Message>>> => {
+    const params: any = { pageSize }
+    if (lastMessageId) {
+      params.lastMessageId = lastMessageId
+    }
+    return request.get(`/messages/chatroom/${chatRoomId}/messages`, { params })
+  },
+
   // 创建SSE流式连接 - 基于你的SSE实现
   createStreamConnection: (chatId: number, roleId: number, userMessage: string): EventSource => {
     const token = localStorage.getItem('token')
@@ -52,6 +61,31 @@ export const messageAPI = {
     
     const url = `${baseURL}/api/sse/stream?${params.toString()}`
     console.log('创建SSE流式连接:', url)
+    
+    return new EventSource(url)
+  },
+
+  // 创建聊天室协作SSE连接
+  createChatroomCollaborationConnection: (chatId: number, userMessage: string, context?: string): EventSource => {
+    const token = localStorage.getItem('token')
+    const baseURL = import.meta.env.DEV ? 'http://localhost:16999' : ''
+    
+    // 构建查询参数
+    const params = new URLSearchParams({
+      chatId: chatId.toString(),
+      userMessage: userMessage
+    })
+    
+    if (context) {
+      params.append('context', context)
+    }
+    
+    if (token) {
+      params.append('token', token)
+    }
+    
+    const url = `${baseURL}/api/sse/collaborate?${params.toString()}`
+    console.log('创建聊天室协作SSE连接:', url)
     
     return new EventSource(url)
   }

@@ -9,6 +9,7 @@ import java.util.List;
  * 消息服务接口
  * 遵循SOLID原则中的接口隔离原则
  * 定义消息相关的业务操作
+ * 专注于单agent聊天功能
  */
 public interface IMessageService {
 
@@ -48,20 +49,6 @@ public interface IMessageService {
     List<Message> getUnreadMessages(Long chatId);
 
     /**
-     * 标记聊天的所有消息为已读
-     *
-     * @param chatId 聊天ID
-     */
-    void markMessagesAsRead(Long chatId);
-
-    /**
-     * 标记单条消息为已读
-     *
-     * @param messageId 消息ID
-     */
-    void markMessageAsRead(Long messageId);
-
-    /**
      * 统计聊天消息数量
      *
      * @param chatId 聊天ID
@@ -94,7 +81,7 @@ public interface IMessageService {
     /**
      * 保存语音消息（重载方法，支持内容和转文字分开）
      *
-     * @param chatId         聊天ID  
+     * @param chatId         聊天ID
      * @param roleId         角色ID
      * @param senderType     发送者类型
      * @param content        消息内容（AI回复文本）

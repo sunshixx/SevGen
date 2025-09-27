@@ -8,11 +8,12 @@ import java.util.Optional;
 
 /**
  * 聊天会话服务接口
+ * 专门处理单agent聊天功能
  */
 public interface IChatService {
 
     /**
-     * 创建聊天会话
+     * 创建聊天会话（单角色）
      */
     Chat createChat(Long userId, Long roleId);
 
@@ -43,11 +44,6 @@ public interface IChatService {
      * 更新聊天会话
      */
     Chat updateChat(Chat chat);
-
-    /**
-     * 停用聊天会话
-     */
-    void deactivateChat(Long id);
 
     /**
      * 删除聊天会话

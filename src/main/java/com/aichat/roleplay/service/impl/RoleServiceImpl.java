@@ -145,10 +145,10 @@ public class RoleServiceImpl implements IRoleService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("角色不存在: " + roleName));
         
-        // 2. 构建角色提示词
-        String rolePrompt = role.getCharacterPrompt();
-        
-        // 3. 生成响应 - 直接调用SseService
-        return sseService.generateRoleResponse(rolePrompt, prompt, context);
+
+        String fullMessage = context != null && !context.trim().isEmpty() ? 
+                context + "\n\n" + prompt : prompt;
+
+        return sseService.getAiResponseText(role.getId(), role.getId(), fullMessage, false);
     }
 }

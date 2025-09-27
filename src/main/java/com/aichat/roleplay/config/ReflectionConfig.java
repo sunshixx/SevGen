@@ -47,8 +47,6 @@ public class ReflectionConfig {
     
     /**
      * 积极关键词列表
-     * 用于检测回复是否符合预期，默认为空以保持通用性
-     * 可根据具体业务场景在配置文件中自定义
      */
     private List<String> positiveKeywords = List.of();
     

@@ -97,24 +97,7 @@ public class ApiResponse<T> {
         return new ApiResponse<>(400, message, null);
     }
 
-    /**
-     * 未授权响应
-     *
-     * @return ApiResponse
-     */
-    public static <T> ApiResponse<T> unauthorized() {
-        return new ApiResponse<>(401, "未授权访问", null);
-    }
 
-    /**
-     * 资源不存在响应
-     *
-     * @param message 错误消息
-     * @return ApiResponse
-     */
-    public static <T> ApiResponse<T> notFound(String message) {
-        return new ApiResponse<>(404, message, null);
-    }
 
     // Getter and Setter methods
     public int getCode() {
