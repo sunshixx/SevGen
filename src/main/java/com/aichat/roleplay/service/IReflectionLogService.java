@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 反思日志服务接口，后续可以介入普罗米修斯和grafna之类的可视化
+ * 反思日志服务接口，后续可以介入普罗米修斯和Grafana之类的可视化
  */
 public interface IReflectionLogService {
     

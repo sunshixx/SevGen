@@ -3,6 +3,7 @@ package com.aichat.roleplay.service.impl;
 import com.aichat.roleplay.service.VoiceService;
 import com.aichat.roleplay.service.IFileStorageService;
 import com.aichat.roleplay.service.IMessageService;
+import com.aichat.roleplay.service.SseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -30,6 +31,9 @@ public class VoiceServiceImpl implements VoiceService {
     private IMessageService messageService;
     
     @Autowired
+    private SseService sseService;
+    
+    @Autowired
     private RestTemplate restTemplate;
     
     @Value("${langchain4j.open-ai.chat-model.api-key}")
@@ -49,34 +53,41 @@ public class VoiceServiceImpl implements VoiceService {
             String aiResponse = null;
             String aiAudioUrl = null;
 
+            
+
             userAudioUrl = fileStorageService.uploadAudioFile(audioFile, audioFile.getOriginalFilename());
             logger.info("用户音频上传完成，URL: " + userAudioUrl);
+            
 
             transcribedText = speechToTextWithModel(userAudioUrl, audioFile.getOriginalFilename());
             logger.info("语音转文字完成: " + transcribedText);
+            
 
             messageService.saveVoiceMessage(chatId, roleId, "user", userAudioUrl, transcribedText, null);
+            
 
-            aiResponse = processWithAI(transcribedText);
+            aiResponse = processWithAI(chatId, roleId, transcribedText);
+
             logger.info("AI回复: " + aiResponse);
             
-            // 阶段4：AI回复转语音
+
             byte[] aiAudioBytes = textToSpeechWithModel(aiResponse);
             logger.info("AI语音合成完成，大小: " + aiAudioBytes.length + " bytes");
             
-            // 上传AI音频
+
             try {
-                // 创建临时MultipartFile用于上传AI音频
+
                 String aiFileName = "ai_response_" + System.currentTimeMillis() + ".mp3";
                 aiAudioUrl = fileStorageService.uploadAudioFile(aiAudioBytes, aiFileName, "audio/mpeg");
                 logger.info("AI音频上传完成，URL: " + aiAudioUrl);
                 
-                // 保存AI语音消息
+                // 保存AI语音消息（包含文本内容和音频URL）
                 messageService.saveVoiceMessage(chatId, roleId, "ai", aiResponse, aiAudioUrl, null, null);
                 
             } catch (Exception e) {
                 logger.warning("AI音频上传失败: " + e.getMessage());
-                // 即使上传失败，仍然返回音频数据
+                // 即使上传失败，仍然保存AI文本消息
+                messageService.saveVoiceMessage(chatId, roleId, "ai", aiResponse, null, null, null);
             }
             
             long totalTime = System.currentTimeMillis() - startTime;
@@ -158,9 +169,17 @@ public class VoiceServiceImpl implements VoiceService {
     }
     
 
-    private String processWithAI(String inputText) {
+    private String processWithAI(Long chatId, Long roleId, String inputText) {
         try {
+            logger.info("使用SSE服务处理AI对话，输入长度: " + inputText.length() + " 字符");
             long startTime = System.currentTimeMillis();
+
+
+
+            // 调用SSE服务时禁用消息保存，避免重复保存
+            String aiResponse = sseService.getAiResponseText(chatId, roleId, inputText, false);
+
+
             String url = baseUrl + "/chat/completions";
             
             HttpHeaders headers = new HttpHeaders();
@@ -185,29 +204,13 @@ public class VoiceServiceImpl implements VoiceService {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
             @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
+
             
             long responseTime = System.currentTimeMillis() - startTime;
-            logger.info("AI响应耗时: " + responseTime + "ms");
+            logger.info("AI响应耗时: " + responseTime + "ms，回复长度: " + 
+                       (aiResponse != null ? aiResponse.length() : 0) + " 字符");
             
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
-                if (responseBody != null) {
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
-                    if (choices != null && !choices.isEmpty()) {
-                        Map<String, Object> choice = choices.get(0);
-                        @SuppressWarnings("unchecked")
-                        Map<String, String> messageObj = (Map<String, String>) choice.get("message");
-                        if (messageObj != null) {
-                            String result = messageObj.get("content");
-                            logger.info("AI回复长度: " + (result != null ? result.length() : 0) + " 字符");
-                            return result;
-                        }
-                    }
-                }
-            }
-            throw new RuntimeException("AI对话API调用失败，状态码: " + response.getStatusCode());
+            return aiResponse;
             
         } catch (Exception e) {
             logger.severe("AI对话处理失败: " + e.getMessage());
