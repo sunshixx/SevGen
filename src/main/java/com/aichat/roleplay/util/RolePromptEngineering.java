@@ -1,7 +1,7 @@
 package com.aichat.roleplay.util;
 
 import com.aichat.roleplay.model.Role;
-import com.aichat.roleplay.service.SimpleRagService;
+import com.aichat.roleplay.service.RagService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -14,15 +14,10 @@ import org.springframework.util.StringUtils;
 public class RolePromptEngineering {
 
     @Autowired
-    private SimpleRagService ragService;
+    private RagService ragService;
 
     /**
      * 根据角色类型构建优化的prompt
-     *
-     * @param role 角色信息
-     * @param userMessage 用户消息
-     * @param chatHistory 聊天历史
-     * @return 优化后的完整prompt
      */
     public String buildOptimizedPrompt(Role role, String userMessage, String chatHistory) {
         StringBuilder promptBuilder = new StringBuilder();

@@ -30,7 +30,7 @@ import com.aichat.roleplay.model.Role;
 
 @Slf4j
 @Service
-public class SimpleRagService {
+public class RagService {
 
     private final EmbeddingModel embeddingModel;
     private final ResourceLoader resourceLoader;
@@ -44,7 +44,7 @@ public class SimpleRagService {
     private final Map<String, String> roleNameMapping = new ConcurrentHashMap<>();
 
     @Autowired
-    public SimpleRagService(EmbeddingModel embeddingModel, ResourceLoader resourceLoader, IRoleService roleService) {
+    public RagService(EmbeddingModel embeddingModel, ResourceLoader resourceLoader, IRoleService roleService) {
         this.embeddingModel = embeddingModel;
         this.resourceLoader = resourceLoader;
         this.roleService = roleService;
