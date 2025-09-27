@@ -15,7 +15,6 @@ public interface IAiChatService {
     String generateCharacterResponse(String roleName, String characterPrompt, String userMessage);
 
 
-
     void generateStreamResponseDirect(String fullPrompt, StreamResponseCallback callback);
 
     /**

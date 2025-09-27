@@ -78,7 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
       
       const response = await authAPI.getCurrentUser()
       console.log('fetchCurrentUser - 响应成功:', response)
-      
+
       if (response.data) {
         user.value = response.data
         console.log('fetchCurrentUser - 用户信息设置成功:', response.data.username)
@@ -113,7 +113,7 @@ export const useAuthStore = defineStore('auth', () => {
       
       const response = await authAPI.getCurrentUser()
       console.log('fetchCurrentUserSilent - 响应成功:', response)
-      
+
       if (response.data) {
         user.value = response.data
         console.log('fetchCurrentUserSilent - 用户信息设置成功，返回true')

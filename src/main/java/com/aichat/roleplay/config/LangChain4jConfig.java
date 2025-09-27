@@ -59,7 +59,7 @@ public class LangChain4jConfig {
                 .modelName(chatModelName)
                 .temperature(temperature)
                 .maxTokens(maxTokens)
-                .timeout(Duration.ofSeconds(60))
+                .timeout(Duration.ofSeconds(120))  // 增加到120秒，适应语音场景
                 .build();
     }
 

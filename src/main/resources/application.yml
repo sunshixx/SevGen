@@ -44,9 +44,11 @@ langchain4j:
     chat-model:
       base-url: https://openai.qiniu.com/v1
       api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
-      model-name: deepseek/deepseek-v3.1-terminus
+
+      model-name: nvidia/llama-3.3-nemotron-super-49b-v1.5
+
       max-tokens: 4096
-      temperature: 0.2
+      temperature: 0.5
     
     # 语音转文字模型配置
     speech-to-text-model:
@@ -66,6 +68,11 @@ file:
   storage:
     upload-url: ${FILE_UPLOAD_URL:http://111.62.241.115/upload.php}  # 远程上传接口
     base-url: ${FILE_STORAGE_URL:http://111.62.241.115}   # 远程访问地址
+
+# RAG配置
+rag:
+  max-results: 5
+  similarity-threshold: 0.7
 
 # 日志配置
 logging:

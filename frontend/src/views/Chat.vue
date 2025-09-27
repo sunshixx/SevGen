@@ -823,73 +823,71 @@ const sendMessageToChat = async (chatId: number, content: string) => {
       // 监听SSE事件
       eventSource.onmessage = (event) => {
         try {
-          const data = event.data.trim()
-          console.log('收到SSE数据:', data)
-          
-          // 解析数据：你的后端发送的格式是 "data: token"
-          if (data.startsWith('data: ')) {
-            const token = data.substring(6) // 移除 "data: " 前缀
-            
+          // 支持多行 data，逐行处理
+          const lines = event.data.split('\n')
+          for (const line of lines) {
+            const data = line.trim()
+            if (!data) continue
+            console.log('收到SSE数据:', data)
+            let token = data
+            // 兼容 "data: " 前缀
+            if (token.startsWith('data: ')) {
+              token = token.substring(6)
+            }
+            // 处理特殊 token
             if (token === '[DONE]') {
-              // AI回复完成
-              console.log('AI回复完成，累积内容长度:', aiResponse.length)
-              
-              // 移除临时消息，重新加载完整列表
-              
-              // 重新加载完整的消息列表（包含数据库中保存的真实消息）
-              loadMessages(chatId)
-              
-              eventSource.close()
-              isAiReplying.value = false
-              ElMessage.success('消息发送成功')
-              resolve() // 成功完成
-              
-            } else if (token === '[ERROR]') {
-              // AI回复出错
-              console.error('AI回复出错')
-              ElMessage.error('AI回复异常，请重试')
-              eventSource.close()
-              isAiReplying.value = false
-              reject(new Error('AI回复异常'))
-              
-            } else {
-              // 累积AI回复token
-              aiResponse += token
-              
-              // 创建或更新临时AI消息用于实时显示
-              if (!tempAiMessage) {
-                tempAiMessage = {
-                  id: Date.now() + 1, // 确保与用户消息ID不同
+              // 在刷新数据库消息前，先将流式累积内容保存为一条AI消息
+              if (aiResponse.trim()) {
+                const finalAiMessage: Message = {
+                  id: Date.now() + 2,
                   chatId: chatId,
                   content: aiResponse,
                   senderType: 'ai',
                   sentAt: new Date().toISOString(),
                   isRead: false
                 }
-                
-                // 添加临时AI消息到列表
+                const currentMessages = allMessages.value.get(chatId) || []
+                allMessages.value.set(chatId, [...currentMessages, finalAiMessage])
+                scrollToBottom()
+              }
+              loadMessages(chatId)
+              eventSource.close()
+              isAiReplying.value = false
+              ElMessage.success('消息发送成功')
+              resolve()
+            } else if (token === '[ERROR]') {
+              ElMessage.error('AI回复异常，请重试')
+              eventSource.close()
+              isAiReplying.value = false
+              reject(new Error('AI回复异常'))
+            } else if (token.startsWith('[RETRY]')) {
+              ElMessage.info('AI正在重新生成答案...')
+            } else if (token.startsWith('[ERROR] ')) {
+              ElMessage.error(token.replace('[ERROR] ', ''))
+            } else {
+              aiResponse += token
+              if (!tempAiMessage) {
+                tempAiMessage = {
+                  id: Date.now() + 1,
+                  chatId: chatId,
+                  content: aiResponse,
+                  senderType: 'ai',
+                  sentAt: new Date().toISOString(),
+                  isRead: false
+                }
                 const currentMessages = allMessages.value.get(chatId) || []
                 allMessages.value.set(chatId, [...currentMessages, tempAiMessage])
-                
               } else {
-                // 更新现有临时AI消息的内容
-                if (tempAiMessage) {
-                  tempAiMessage.content = aiResponse
-                  
-                  // 触发响应式更新
-                  const currentMessages = allMessages.value.get(chatId) || []
-                  const updatedMessages = currentMessages.map(msg => 
-                    msg.id === tempAiMessage!.id ? { ...tempAiMessage! } : msg
-                  )
-                  allMessages.value.set(chatId, updatedMessages)
-                }
+                tempAiMessage.content = aiResponse
+                const currentMessages = allMessages.value.get(chatId) || []
+                const updatedMessages = currentMessages.map(msg => 
+                  msg.id === tempAiMessage!.id ? { ...tempAiMessage! } : msg
+                )
+                allMessages.value.set(chatId, updatedMessages)
               }
-              
-              // 滚动到最新消息
               scrollToBottom()
             }
           }
-          
         } catch (error) {
           console.error('处理SSE消息失败:', error, event.data)
           reject(error)
@@ -980,37 +978,60 @@ const deleteChat = async (chatId: number) => {
 }
 
 
+// 全局角色缓存标志，避免重复加载
+const isRolesCacheLoaded = ref(false)
+
+// 一次性加载所有角色到缓存
+const loadAllRolesToCache = async () => {
+  if (isRolesCacheLoaded.value) {
+    console.log('角色缓存已存在，跳过加载')
+    return
+  }
+  
+  try {
+    console.log('开始加载所有角色到缓存...')
+    const rolesResponse = await roleAPI.getAllPublicRoles()
+    
+    if (rolesResponse.success && rolesResponse.data) {
+      const roles = rolesResponse.data
+      console.log(`成功获取 ${roles.length} 个角色`)
+      
+      // 缓存所有角色信息
+      roles.forEach(role => {
+        rolesCache.value.set(role.id, role)
+      })
+      
+      isRolesCacheLoaded.value = true
+      console.log('角色缓存加载完成')
+    }
+  } catch (error) {
+    console.error('加载角色缓存失败:', error)
+  }
+}
+
 // 加载聊天列表
 const loadChatList = async () => {
   try {
     console.log('开始加载聊天列表...')
-    // 先尝试获取用户已有的聊天（使用分页接口，pageSize设大一些获取所有聊天）
-    const response = await chatAPI.getUserChats(undefined, 100)  // 获取前100个聊天
+    
+    // 先确保角色缓存已加载
+    await loadAllRolesToCache()
+    
+    // 获取用户已有的聊天
+    const response = await chatAPI.getUserChats(undefined, 100)
     console.log('聊天列表API响应:', response)
     
     if (response.success && response.data && response.data.length > 0) {
       console.log(`找到 ${response.data.length} 个现有聊天记录`)
       
-      // 为现有聊天加载角色信息 - 等待所有角色加载完成
-      const roleLoadPromises = response.data.map(async (chat) => {
-        if (!rolesCache.value.has(chat.roleId)) {
-          const role = await loadRole(chat.roleId)
-          console.log(`角色加载结果: roleId=${chat.roleId}, role=`, role)
-          return role
-        }
-        return rolesCache.value.get(chat.roleId)
-      })
-      
-      // 等待所有角色信息加载完成
-      await Promise.all(roleLoadPromises)
-      console.log('所有角色信息加载完成，当前缓存:', Array.from(rolesCache.value.entries()))
-      
-      // 设置聊天列表（只有在角色信息都准备好后才显示）
+      // 立即设置聊天列表，不等待角色信息（因为已经缓存了）
       chatList.value = response.data
       console.log(`成功加载 ${chatList.value.length} 个聊天记录`)
       
-      // 检查是否需要为其他角色创建聊天
-      await ensureAllRoleChats()
+      // 异步检查是否需要为其他角色创建聊天（不阻塞UI）
+      ensureAllRoleChats().catch(error => {
+        console.error('检查角色聊天记录时出错:', error)
+      })
       
     } else {
       console.log('没有现有聊天记录，创建基于角色的聊天...')
@@ -1026,25 +1047,17 @@ const loadChatList = async () => {
 // 基于角色创建聊天对话
 const createChatsFromRoles = async () => {
   try {
-    console.log('开始获取公开角色列表...')
-    // 获取公开角色列表
-    const rolesResponse = await roleAPI.getAllPublicRoles()
-    console.log('角色列表API响应:', rolesResponse)
+    // 确保角色缓存已加载
+    await loadAllRolesToCache()
     
-    if (!rolesResponse.success || !rolesResponse.data) {
-      console.log('获取角色列表失败:', rolesResponse.message)
+    const roles = Array.from(rolesCache.value.values())
+    if (roles.length === 0) {
+      console.log('没有可用的角色数据')
       ElMessage.warning('暂无可用角色')
       return
     }
     
-    const roles = rolesResponse.data // 移除限制，显示所有角色
-    console.log(`从API获取到 ${roles.length} 个公开角色`)
-    
-    // 先缓存所有角色信息
-    roles.forEach(role => {
-      rolesCache.value.set(role.id, role)
-      console.log(`缓存角色: ID=${role.id}, Name=${role.name}`)
-    })
+    console.log(`使用缓存中的 ${roles.length} 个角色创建聊天`)
 
     // 为每个角色创建一个聊天对话
     const createdChats: Chat[] = []
@@ -1070,7 +1083,6 @@ const createChatsFromRoles = async () => {
     
     chatList.value = createdChats
     console.log(`成功创建 ${createdChats.length} 个聊天对话`)
-    console.log('最终角色缓存内容:', Array.from(rolesCache.value.entries()))
     
   } catch (error) {
     console.error('基于角色创建聊天失败:', error)
@@ -1083,20 +1095,14 @@ const ensureAllRoleChats = async () => {
   try {
     console.log('=== 开始检查所有角色的聊天记录 ===')
     
-    // 获取所有公开角色
-    const rolesResponse = await roleAPI.getAllPublicRoles()
-    if (!rolesResponse.success || !rolesResponse.data) {
-      console.log('获取角色列表失败:', rolesResponse.message)
+    // 使用缓存中的角色数据，避免重复API调用
+    const allRoles = Array.from(rolesCache.value.values())
+    if (allRoles.length === 0) {
+      console.log('角色缓存为空，跳过检查')
       return
     }
     
-    const allRoles = rolesResponse.data
-    console.log(`数据库中共有 ${allRoles.length} 个公开角色`)
-    
-    // 缓存所有角色信息
-    allRoles.forEach(role => {
-      rolesCache.value.set(role.id, role)
-    })
+    console.log(`使用缓存中的 ${allRoles.length} 个角色进行检查`)
     
     // 检查哪些角色没有聊天记录
     const existingRoleIds = new Set(chatList.value.map(chat => chat.roleId))
@@ -1132,14 +1138,15 @@ const ensureAllRoleChats = async () => {
   }
 }
 
-// 加载角色信息
+// 加载角色信息（优先使用缓存）
 const loadRole = async (roleId: number) => {
   try {
+    // 优先使用缓存
     if (rolesCache.value.has(roleId)) {
       return rolesCache.value.get(roleId)
     }
     
-    // 从API获取角色信息
+    // 如果缓存中没有，尝试从API获取单个角色
     const response = await roleAPI.getRoleById(roleId)
     
     if (response.success && response.data) {
@@ -1202,9 +1209,13 @@ watch(
 
 // 组件挂载时初始化
 onMounted(async () => {
+  const startTime = Date.now()
   console.log('Chat组件挂载，开始加载数据...')
+  
   await loadChatList()
   
+  const endTime = Date.now()
+  console.log(`数据加载完成，耗时: ${endTime - startTime}ms`)
   console.log('聊天列表加载完成，当前聊天数量:', chatList.value.length)
   console.log('角色缓存状态:', Array.from(rolesCache.value.entries()))
   
@@ -1232,7 +1243,10 @@ onUnmounted(() => {
   audioElements.value.clear()
   playbackProgress.value.clear()
   
-  console.log('语音播放资源已清理')
+  // 注意：不清理角色缓存，让其在整个应用生命周期中保持
+  // 这样可以避免重复加载角色数据
+  
+  console.log('Chat组件资源已清理（保留角色缓存）')
 })
 
 // 监听activeChatId变化，加载对应消息

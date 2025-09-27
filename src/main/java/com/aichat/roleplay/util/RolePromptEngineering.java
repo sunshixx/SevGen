@@ -1,6 +1,8 @@
 package com.aichat.roleplay.util;
 
 import com.aichat.roleplay.model.Role;
+import com.aichat.roleplay.service.RagService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -11,13 +13,11 @@ import org.springframework.util.StringUtils;
 @Service
 public class RolePromptEngineering {
 
+    @Autowired
+    private RagService ragService;
+
     /**
      * 根据角色类型构建优化的prompt
-     *
-     * @param role 角色信息
-     * @param userMessage 用户消息
-     * @param chatHistory 聊天历史
-     * @return 优化后的完整prompt
      */
     public String buildOptimizedPrompt(Role role, String userMessage, String chatHistory) {
         StringBuilder promptBuilder = new StringBuilder();
@@ -48,16 +48,24 @@ public class RolePromptEngineering {
         // 添加通用的行为规范
         addCommonBehaviorGuidelines(promptBuilder);
         
+        // 集成RAG检索相关内容
+        String relevantContent = ragService.getRoleRelevantContent(role.getId(), userMessage);
+        if (StringUtils.hasText(relevantContent)) {
+            promptBuilder.append("\n相关知识背景：\n");
+            promptBuilder.append(relevantContent).append("\n");
+        }
+        
         // 添加聊天历史
         if (StringUtils.hasText(chatHistory)) {
             promptBuilder.append("\n对话历史：\n");
             promptBuilder.append(chatHistory).append("\n");
         }
         
-        // 添加用户消息和回复指令
-        promptBuilder.append("\n用户问题：").append(userMessage);
-        promptBuilder.append("\n\n现在请以").append(role.getName()).append("的身份回复用户的问题。");
-        promptBuilder.append("\n注意：只输出").append(role.getName()).append("的回复内容，不要重复用户的问题。");
+            // 添加用户问题（单独一行，避免meta指令混入）
+            promptBuilder.append("\n用户问题：").append(userMessage).append("\n");
+        
+            // 添加回复指令（单独一行，便于LLM区分）
+            promptBuilder.append("\n[指令] 现在请以").append(role.getName()).append("的身份回复用户的问题。只输出").append(role.getName()).append("的回复内容，不要重复用户的问题。\n");
         
         return promptBuilder.toString();
     }
@@ -214,6 +222,7 @@ public class RolePromptEngineering {
         promptBuilder.append("6. 保持专注：围绕角色特点回答，但用正常的日常语言\n");
         promptBuilder.append("7. 态度自然：不卑不亢，像朋友一样交流\n");
         promptBuilder.append("8. 如果被问到公式、原理、推导、原理细节等问题，请用 markdown 详细分步展示数学/逻辑推导，并分段解释原理，不受简洁回复限制。遇到此类问题时，务必系统、完整、详细地讲解，直到用户主动打断为止。\n");
+        promptBuilder.append("9. 如果用户直接要求代码示例，请直接输出完整代码（用 markdown 代码块），无需追问或解释，除非用户主动要求说明。\n");
     }
 
     /**
