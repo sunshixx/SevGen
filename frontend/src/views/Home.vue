@@ -21,6 +21,15 @@
         </div>
         
         <div class="user-section">
+          <el-button 
+            @click="goToChatRooms" 
+            type="primary" 
+            icon="House"
+            style="margin-right: 1rem;"
+          >
+            聊天室
+          </el-button>
+          
           <el-dropdown @command="handleUserCommand">
             <div class="user-info">
               <el-avatar 
@@ -39,6 +48,9 @@
                 </el-dropdown-item>
                 <el-dropdown-item command="chats">
                   <el-icon><ChatDotRound /></el-icon> 我的对话
+                </el-dropdown-item>
+                <el-dropdown-item command="chatrooms">
+                  <el-icon><House /></el-icon> 聊天室
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <el-icon><SwitchButton /></el-icon> 退出登录
@@ -144,7 +156,8 @@ import {
   ArrowDown, 
   User, 
   ChatDotRound, 
-  SwitchButton
+  SwitchButton,
+  House
 } from '@element-plus/icons-vue'
 import { useAuthStore, useRoleStore } from '@/stores'
 import { chatAPI } from '@/api'
@@ -239,6 +252,9 @@ const handleUserCommand = async (command: string) => {
       // TODO: 跳转到对话列表页面
       ElMessage.info('对话列表功能开发中...')
       break
+    case 'chatrooms':
+      router.push('/chatrooms')
+      break
     case 'logout':
       try {
         await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
@@ -255,6 +271,11 @@ const handleUserCommand = async (command: string) => {
       }
       break
   }
+}
+
+// 跳转到聊天室列表
+const goToChatRooms = () => {
+  router.push('/chatrooms')
 }
 </script>
 

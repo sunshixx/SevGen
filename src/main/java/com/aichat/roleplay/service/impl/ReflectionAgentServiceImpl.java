@@ -418,11 +418,13 @@ public class ReflectionAgentServiceImpl implements IReflectionAgentService {
     
     @Override
     public String generateFinalResponse(String originalQuery, String aiResponse) {
-        log.debug("生成最终回复");
+        log.debug("生成最终响应 - 原查询: {}, AI响应: {}", 
+                 originalQuery.substring(0, Math.min(50, originalQuery.length())),
+                 aiResponse.substring(0, Math.min(50, aiResponse.length())));
         
-        // 对于正常的回复，可以进行适当的优化和总结
-        // 这里简单返回原回复，实际可以根据需要进行优化
-        return aiResponse.trim();
+        // 直接返回AI响应，不再进行额外处理
+        // 这样避免了可能的循环优化问题
+        return aiResponse;
     }
     
     /**

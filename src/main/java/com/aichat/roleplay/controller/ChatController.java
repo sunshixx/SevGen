@@ -15,10 +15,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 聊天会话控制器
- * 提供聊天会话的创建、管理功能
+ * 专门处理单agent聊天功能
  * 已废弃，聊天使用ssecontroller来实现，该控制器仅留作后续拓展同步调用使用！！！！！
  */
 @RestController
@@ -29,11 +30,6 @@ public class ChatController {
 
     @Autowired
     private IChatService chatService;
-
-//    @Autowired
-//    public ChatController(IChatService chatService) {
-//        this.chatService = chatService;
-//    }
 
     /**
      * 创建新的聊天会话
@@ -108,12 +104,12 @@ public class ChatController {
     }
 
     /**
-     * 获取当前登录用户
+     * 获取当前用户
      */
     private User getCurrentUser() {
         User user = UserContext.getCurrentUser();
         if (user == null) {
-            throw new RuntimeException("用户未登录或登录已过期");
+            throw new RuntimeException("用户未登录");
         }
         return user;
     }

@@ -74,6 +74,24 @@ export interface CreateChatRequest {
   title?: string
 }
 
+// 聊天室相关类型
+export interface ChatRoom {
+  id: number
+  userId: number
+  name: string
+  description?: string
+  isActive: boolean
+  createTime?: string
+  updateTime?: string
+  roles?: Role[]
+}
+
+export interface CreateChatRoomRequest {
+  name: string
+  description?: string
+  roleIds: number[]
+}
+
 // 消息相关类型
 export interface Message {
   id: number

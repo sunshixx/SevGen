@@ -36,10 +36,12 @@ public class AiChatServiceImpl implements IAiChatService {
 
 
 
+
     @Override
     public String generateCharacterResponse(String roleName, String characterPrompt, String userMessage) {
         return "";
     }
+
 
     @Override
     public void generateStreamResponseDirect(String fullPrompt, StreamResponseCallback callback) {

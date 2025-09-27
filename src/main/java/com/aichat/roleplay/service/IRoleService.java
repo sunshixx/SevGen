@@ -81,4 +81,14 @@ public interface IRoleService {
      * @return 是否存在
      */
     boolean existsByName(String name);
+
+    /**
+     * 生成角色响应
+     *
+     * @param roleName 角色名称
+     * @param prompt 提示词
+     * @param context 对话上下文
+     * @return 角色响应
+     */
+    String generateResponse(String roleName, String prompt, String context);
 }

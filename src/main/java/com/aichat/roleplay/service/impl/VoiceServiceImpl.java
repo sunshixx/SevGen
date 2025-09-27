@@ -39,7 +39,7 @@ public class VoiceServiceImpl implements VoiceService {
     @Value("${langchain4j.open-ai.chat-model.api-key}")
     private String apiKey;
     
-    @Value("${langchain4j.open-ai.chat-model.base-url:https://openai.qiniu.com}")
+    @Value("${langchain4j.open-ai.chat-model.base-url:https://openai.qiniu.com/v1}")
     private String baseUrl;
 
     @Override
@@ -101,7 +101,14 @@ public class VoiceServiceImpl implements VoiceService {
             throw new RuntimeException("语音对话处理失败", e);
         }
     }
-    
+/*
+ *多agent聊天室专用
+ */
+    @Override
+    public Map<String, byte[]> processChatRoomMultiRoleVoiceChat(MultipartFile audioFile, Long chatRoomId) {
+        return Map.of();
+    }
+
     /**
      * 使用URL方式调用七牛云ASR API
      */
@@ -221,28 +228,28 @@ public class VoiceServiceImpl implements VoiceService {
     private byte[] textToSpeechWithModel(String text) {
         try {
             String url = baseUrl + "/voice/tts";
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + apiKey);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             Map<String, Object> requestBody = new HashMap<>();
-            
+
             Map<String, Object> audioParams = new HashMap<>();
             //todo 按照角色构建创建不同的音色
             audioParams.put("voice_type", "qiniu_zh_male_hlsnkk");
             audioParams.put("encoding", "mp3");
-            audioParams.put("speed_ratio", 1.0);
+            audioParams.put("speed_ratio", 1.5);
             requestBody.put("audio", audioParams);
-            
+
             Map<String, Object> requestParams = new HashMap<>();
             requestParams.put("text", text);
             requestBody.put("request", requestParams);
-            
+
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
             @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> body = (Map<String, Object>) response.getBody();
@@ -254,7 +261,7 @@ public class VoiceServiceImpl implements VoiceService {
                 }
             }
             throw new RuntimeException("文字转语音API调用失败，状态码: " + response.getStatusCode());
-            
+
         } catch (Exception e) {
             logger.severe("文字转语音失败: " + e.getMessage());
             throw new RuntimeException("文字转语音失败", e);

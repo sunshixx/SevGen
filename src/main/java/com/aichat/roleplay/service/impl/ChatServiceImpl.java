@@ -15,9 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * 聊天会话服务实现类
- */
+
 @Service
 @Transactional
 public class ChatServiceImpl implements IChatService {
@@ -67,14 +65,14 @@ public class ChatServiceImpl implements IChatService {
     @Override
     @Transactional(readOnly = true)
     public List<Chat> getUserChats(Long userId) {
-        log.debug("获取用户所有聊天会话，用户ID: {}", userId);
+        log.debug("获取用户聊天会话，用户ID: {}", userId);
         return chatMapper.findByUserId(userId);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public List<Chat> getUserChats(Long userId, LocalDateTime lastUpdatedAt, int pageSize) {
-        log.debug("分页获取用户聊天会话，用户ID: {}, lastUpdatedAt: {}, pageSize: {}", userId, lastUpdatedAt, pageSize);
+        log.debug("分页获取用户聊天会话，用户ID: {}, 最后更新时间: {}, 页面大小: {}", userId, lastUpdatedAt, pageSize);
         return chatMapper.findByUserIdPage(userId, lastUpdatedAt, pageSize);
     }
 
@@ -88,7 +86,7 @@ public class ChatServiceImpl implements IChatService {
     @Override
     @Transactional(readOnly = true)
     public Optional<Chat> getChatById(Long id) {
-        log.debug("根据ID获取聊天会话: {}", id);
+        log.debug("根据ID获取聊天会话，ID: {}", id);
         Chat chat = chatMapper.selectById(id);
         return Optional.ofNullable(chat);
     }
@@ -96,12 +94,16 @@ public class ChatServiceImpl implements IChatService {
     @Override
     public Chat updateChat(Chat chat) {
         log.info("更新聊天会话，会话ID: {}", chat.getId());
-
-        // 检查会话是否存在
-        if (chatMapper.selectById(chat.getId()) == null) {
+        
+        // 验证聊天会话是否存在
+        Chat existingChat = chatMapper.selectById(chat.getId());
+        if (existingChat == null) {
             throw new RuntimeException("聊天会话不存在");
         }
-
+        
+        // 更新时间
+        chat.setUpdateTime(LocalDateTime.now());
+        
         int result = chatMapper.updateById(chat);
         if (result > 0) {
             log.info("聊天会话更新成功，会话ID: {}", chat.getId());
@@ -112,28 +114,15 @@ public class ChatServiceImpl implements IChatService {
     }
 
     @Override
-    public void deactivateChat(Long id) {
-        log.info("停用聊天会话，会话ID: {}", id);
-
-        Chat chat = chatMapper.selectById(id);
-        if (chat == null) {
-            throw new RuntimeException("聊天会话不存在");
-        }
-
-        chat.setIsActive(false);
-        int result = chatMapper.updateById(chat);
-        if (result > 0) {
-            log.info("聊天会话停用成功，会话ID: {}", id);
-        } else {
-            throw new RuntimeException("聊天会话停用失败");
-        }
-    }
-
-    @Override
     public void deleteChat(Long id) {
         log.info("删除聊天会话，会话ID: {}", id);
-
-        // 使用逻辑删除
+        
+        // 验证聊天会话是否存在
+        Chat existingChat = chatMapper.selectById(id);
+        if (existingChat == null) {
+            throw new RuntimeException("聊天会话不存在");
+        }
+        
         int result = chatMapper.deleteById(id);
         if (result > 0) {
             log.info("聊天会话删除成功，会话ID: {}", id);

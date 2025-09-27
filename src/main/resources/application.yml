@@ -101,3 +101,11 @@ reflection:
     check-role-consistency: true
     anomaly-threshold: 0.4  # 降低阈值，让系统更敏感
     severe-anomaly-threshold: 0.7  # 降低严重阈值
+
+# 线程池配置
+async:
+  executor:
+    core-pool-size: 5
+    max-pool-size: 10
+    queue-capacity: 25
+    thread-name-prefix: SevGen-Async-

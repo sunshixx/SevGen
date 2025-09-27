@@ -1,45 +1,61 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores'
+import Home from '@/views/Home.vue'
+import Login from '@/views/Login.vue'
+import Register from '@/views/Register.vue'
+import Chat from '@/views/Chat.vue'
+import ChatRoom from '@/views/ChatRoom.vue'
+import ChatRoomList from '@/views/ChatRoomList.vue'
+import Profile from '@/views/Profile.vue'
+import NotFound from '@/views/NotFound.vue'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
       name: 'Home',
-      component: () => import('@/views/Home.vue'),
-      meta: { requiresAuth: true }
+      component: Home
     },
     {
       path: '/login',
       name: 'Login',
-      component: () => import('@/views/Login.vue'),
-      meta: { requiresAuth: false }
+      component: Login
     },
     {
       path: '/register',
-      name: 'Register', 
-      component: () => import('@/views/Register.vue'),
-      meta: { requiresAuth: false }
+      name: 'Register',
+      component: Register
     },
     {
       path: '/chat/:id',
       name: 'Chat',
-      component: () => import('@/views/Chat.vue'),
-      meta: { requiresAuth: true },
+      component: Chat,
       props: true
+    },
+    {
+      path: '/chatrooms',
+      name: 'ChatRoomList',
+      component: ChatRoomList,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/chatroom/:id',
+      name: 'ChatRoom',
+      component: ChatRoom,
+      props: true,
+      meta: { requiresAuth: true }
     },
     {
       path: '/profile',
       name: 'Profile',
-      component: () => import('@/views/Profile.vue'),
+      component: Profile,
       meta: { requiresAuth: true }
     },
     {
-      // 404页面
       path: '/:pathMatch(.*)*',
       name: 'NotFound',
-      component: () => import('@/views/NotFound.vue')
+      component: NotFound
     }
   ]
 })

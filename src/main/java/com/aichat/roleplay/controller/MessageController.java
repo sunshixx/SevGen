@@ -71,6 +71,46 @@ public class MessageController {
     }
 
     /**
+     * 分页获取聊天室消息列表
+     */
+    @GetMapping("/chatroom/{chatRoomId}/messages")
+    public ApiResponse<PagedResponse<Message>> getChatRoomMessages(
+            @PathVariable Long chatRoomId,
+            @RequestParam(required = false) Long lastMessageId,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        log.debug("获取聊天室消息，聊天室ID: {}, lastMessageId: {}, pageSize: {}", chatRoomId, lastMessageId, pageSize);
+
+        try {
+            User user = getCurrentUser();
+            
+            // 验证用户是否有权限访问该聊天室
+            List<Chat> chatRoomChats = chatMapper.findByChatRoomId(chatRoomId);
+            boolean hasAccess = chatRoomChats.stream()
+                    .anyMatch(chat -> chat.getUserId().equals(user.getId()));
+            
+            if (!hasAccess) {
+                return ApiResponse.error("无权限访问该聊天室");
+            }
+
+            // 获取消息列表 - 使用现有的findByChatIdPage方法，因为chatId在概念上就是chatRoomId
+            List<Message> messages = messageMapper.findByChatIdPage(chatRoomId, lastMessageId, pageSize);
+            
+            // 标记消息为已读
+            messageMapper.markAllAsReadByChatId(chatRoomId);
+            
+            // 构造分页响应
+            Long nextCursor = messages.isEmpty() ? null : messages.get(messages.size() - 1).getId();
+            boolean hasMore = messages.size() == pageSize;
+
+            PagedResponse<Message> response = new PagedResponse<>(messages, nextCursor, hasMore);
+            return ApiResponse.success("获取聊天室消息成功", response);
+        } catch (Exception e) {
+            log.error("获取聊天室消息失败", e);
+            return ApiResponse.error("获取聊天室消息失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 获取当前用户
      */
     private User getCurrentUser() {

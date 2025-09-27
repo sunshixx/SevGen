@@ -124,18 +124,7 @@ public class UserServiceImpl implements IUserService {
         }
     }
 
-    @Override
-    public void deleteUser(Long id) {
-        log.info("删除用户，用户ID: {}", id);
 
-        // 使用逻辑删除
-        int result = userMapper.deleteById(id);
-        if (result > 0) {
-            log.info("用户删除成功，用户ID: {}", id);
-        } else {
-            throw new RuntimeException("用户删除失败");
-        }
-    }
 
     @Override
     @Transactional(readOnly = true)

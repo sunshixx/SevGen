@@ -18,6 +18,7 @@ import java.util.List;
 
 
 import java.util.Map;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -69,11 +70,6 @@ public class SseService {
     public SseEmitter stream(Long chatId, Long roleId, String userMessage) {
         return streamWithReflection(chatId, roleId, userMessage, 0);
     }
-
-    // 同步获取AI响应文本（用于语音服务）- 包含完整的prompt和反思逻辑
-    public String getAiResponseText(Long chatId, Long roleId, String userMessage) {
-        return getAiResponseText(chatId, roleId, userMessage, true);
-    }
     
     // 同步获取AI响应文本（用于语音服务）- 包含完整的prompt和反思逻辑，可控制是否保存消息
     public String getAiResponseText(Long chatId, Long roleId, String userMessage, boolean saveMessages) {
@@ -92,11 +88,6 @@ public class SseService {
         }
     }
 
-    // 同步处理带反思逻辑的AI响应
-    private void processWithReflectionSync(Long chatId, Long roleId, String originalUserMessage, int currentRetryCount, CompletableFuture<String> responseFuture) {
-        processWithReflectionSync(chatId, roleId, originalUserMessage, currentRetryCount, responseFuture, true);
-    }
-    
     // 同步处理带反思逻辑的AI响应，可控制是否保存消息
     private void processWithReflectionSync(Long chatId, Long roleId, String originalUserMessage, int currentRetryCount, CompletableFuture<String> responseFuture, boolean saveMessages) {
         try {
@@ -142,11 +133,6 @@ public class SseService {
         }
     }
 
-    // 同步版本的反思分析处理
-    private void handleAiResponseCompleteSync(Long chatId, Long roleId, String originalQuery, String aiResponse, int retryCount, CompletableFuture<String> responseFuture) {
-        handleAiResponseCompleteSync(chatId, roleId, originalQuery, aiResponse, retryCount, responseFuture, true);
-    }
-    
     // 同步版本的反思分析处理，可控制是否保存消息
     private void handleAiResponseCompleteSync(Long chatId, Long roleId, String originalQuery, String aiResponse, int retryCount, CompletableFuture<String> responseFuture, boolean saveMessages) {
         try {

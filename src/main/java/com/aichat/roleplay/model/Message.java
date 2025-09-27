@@ -24,13 +24,27 @@ public class Message implements Serializable {
     private Long id;
 
     /**
-     * 聊天会话ID
+     * 聊天会话ID - 现在指向聊天室ID
      */
     @TableField("chat_id")
     private Long chatId;
 
+    /**
+     * 角色ID - 消息所属的角色
+     */
     @TableField("role_id")
     private Long roleId;
+
+    /**
+     * 聊天室ID - 为了语义清晰，添加此字段（实际上与chatId相同）
+     */
+    public Long getChatRoomId() {
+        return this.chatId;
+    }
+
+    public void setChatRoomId(Long chatRoomId) {
+        this.chatId = chatRoomId;
+    }
 
     /**
      * 发送者类型：user 或 ai
@@ -91,7 +105,17 @@ public class Message implements Serializable {
     public Message() {}
 
     public Message(Long chatId, Long roleId,String senderType, String content) {
-        this.chatId = chatId;
+        this.chatId = chatId; // chatId现在实际上是chatRoomId
+        this.roleId = roleId;
+        this.senderType = senderType;
+        this.content = content;
+        this.isRead = false;
+        this.deleted = 0;
+    }
+
+    // 为了语义清晰，添加使用chatRoomId的构造函数
+    public Message(Long chatRoomId, Long roleId, String senderType, String content, boolean useChatRoomId) {
+        this.chatId = chatRoomId; // 实际存储在chatId字段中
         this.roleId = roleId;
         this.senderType = senderType;
         this.content = content;
