@@ -9,9 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Arrays;
 
 /**
- * 反思Agent服务实现类
+ * 反思Agent服务实现类 - 重构版本
  * 负责分析AI回复质量，判断是否需要重试
  */
 @Service
@@ -21,7 +24,18 @@ public class ReflectionAgentServiceImpl implements IReflectionAgentService {
     
     @Autowired
     private ReflectionConfig reflectionConfig;
-    
+
+    // 检测结果缓存，避免重复计算
+    private static class DetectionResult {
+        double score;
+        String issue;
+        
+        DetectionResult(double score, String issue) {
+            this.score = score;
+            this.issue = issue;
+        }
+    }
+
     @Override
     public ReflectionResult reflect(String originalQuery, String aiResponse, Long chatId, Long roleId, int currentRetryCount) {
         log.info("开始反思分析 - chatId: {}, roleId: {}, retryCount: {}", chatId, roleId, currentRetryCount);
@@ -51,34 +65,33 @@ public class ReflectionAgentServiceImpl implements IReflectionAgentService {
                         .build();
             }
             
-            // 异常检测
-            double anomalyScore = detectAnomalyScore(aiResponse, originalQuery);
-            String detectedIssue = analyzeDetectedIssue(aiResponse, anomalyScore);
+            // 统一异常检测 - 一次性完成所有检测并获取详细结果
+            AnomalyAnalysisResult analysisResult = performComprehensiveAnalysis(aiResponse, originalQuery);
             
-            log.debug("异常检测完成 - 异常分数: {}, 检测问题: {}", anomalyScore, detectedIssue);
-            log.info("问题分析详情 - 检测到的具体问题: [{}]", detectedIssue);
+            log.debug("异常检测完成 - 异常分数: {}, 检测问题: {}", analysisResult.totalScore, analysisResult.detectedIssue);
+            log.info("问题分析详情 - 检测到的具体问题: [{}]", analysisResult.detectedIssue);
             
             // 判断是否需要重试
-            if (anomalyScore > reflectionConfig.getAnomalyDetection().getSevereAnomalyThreshold()) {
+            if (analysisResult.totalScore > reflectionConfig.getAnomalyDetection().getSevereAnomalyThreshold()) {
                 // 严重异常，直接返回错误
                 return ReflectionResult.builder()
                         .action(ReflectionResult.ActionType.ERROR)
                         .retryCount(currentRetryCount)
                         .errorMessage("检测到严重异常，无法通过重试解决")
-                        .detectedIssue(detectedIssue)
-                        .reasonAnalysis(String.format("严重异常(分数: %.2f): %s", anomalyScore, detectedIssue))
+                        .detectedIssue(analysisResult.detectedIssue)
+                        .reasonAnalysis(String.format("严重异常(分数: %.2f): %s", analysisResult.totalScore, analysisResult.detectedIssue))
                         .build();
                         
-            } else if (anomalyScore > reflectionConfig.getAnomalyDetection().getAnomalyThreshold() && !detectedIssue.isEmpty()) {
+            } else if (analysisResult.totalScore > reflectionConfig.getAnomalyDetection().getAnomalyThreshold() && !analysisResult.detectedIssue.isEmpty()) {
                 // 需要重试
-                String regeneratedQuery = regenerateQuery(originalQuery, aiResponse, detectedIssue, currentRetryCount);
+                String regeneratedQuery = regenerateQuery(originalQuery, aiResponse, analysisResult.detectedIssue, currentRetryCount);
                 
                 return ReflectionResult.builder()
                         .action(ReflectionResult.ActionType.RETRY)
                         .retryCount(currentRetryCount + 1)
                         .regeneratedQuery("RETRY" + (currentRetryCount + 1) + " " + regeneratedQuery)
-                        .detectedIssue(detectedIssue)
-                        .reasonAnalysis(String.format("检测到异常(分数: %.2f): %s", anomalyScore, detectedIssue))
+                        .detectedIssue(analysisResult.detectedIssue)
+                        .reasonAnalysis(String.format("检测到异常(分数: %.2f): %s", analysisResult.totalScore, analysisResult.detectedIssue))
                         .build();
             } else {
                 // 回复正常，生成最终回复
@@ -88,7 +101,7 @@ public class ReflectionAgentServiceImpl implements IReflectionAgentService {
                         .action(ReflectionResult.ActionType.SUCCESS)
                         .finalResponse(finalResponse)
                         .retryCount(currentRetryCount)
-                        .reasonAnalysis(String.format("回复正常(异常分数: %.2f)", anomalyScore))
+                        .reasonAnalysis(String.format("回复正常(异常分数: %.2f)", analysisResult.totalScore))
                         .build();
             }
             
@@ -105,265 +118,248 @@ public class ReflectionAgentServiceImpl implements IReflectionAgentService {
             log.debug("反思分析完成，耗时: {}ms", processingTime);
         }
     }
-    
+
     @Override
     public double detectAnomalyScore(String aiResponse, String originalQuery) {
+        return performComprehensiveAnalysis(aiResponse, originalQuery).totalScore;
+    }
+
+    /**
+     * 统一的综合异常分析方法 - 消除重复逻辑的核心方法
+     */
+    private AnomalyAnalysisResult performComprehensiveAnalysis(String aiResponse, String originalQuery) {
         if (aiResponse == null || aiResponse.trim().isEmpty()) {
-            return 1.0; // 空回复，最高异常分数
+            return new AnomalyAnalysisResult(1.0, "回复为空");
         }
         
+        // 预处理文本，避免重复转换
+        String responseLower = aiResponse.toLowerCase();
+        String queryLower = originalQuery.toLowerCase();
+        
+        // 统一检测所有维度，避免重复计算
+        Map<String, DetectionResult> detectionResults = new HashMap<>();
+        
+        // 1. 角色一致性检查 (权重40% - 最重要)
+        detectionResults.put("role", detectRoleInconsistencyUnified(responseLower));
+        
+        // 2. 关键词异常检测 (权重25%)
+        detectionResults.put("keyword", detectKeywordAnomalyUnified(responseLower));
+        
+        // 3. 内容相关性检查 (权重15%)
+        detectionResults.put("relevance", detectContentRelevanceUnified(responseLower, queryLower));
+        
+        // 4. 语言一致性检查 (权重10%)
+        detectionResults.put("language", detectLanguageInconsistencyUnified(aiResponse, originalQuery));
+        
+        // 5. 情感一致性检查 (权重5%)
+        detectionResults.put("emotion", detectEmotionConsistencyUnified(responseLower, queryLower));
+        
+        // 6. 长度检查 (权重5%)
+        detectionResults.put("length", detectLengthAnomalyUnified(aiResponse));
+        
+        // 计算加权总分
         double totalScore = 0.0;
+        totalScore += detectionResults.get("role").score * 0.40;
+        totalScore += detectionResults.get("keyword").score * 0.25;
+        totalScore += detectionResults.get("relevance").score * 0.15;
+        totalScore += detectionResults.get("language").score * 0.10;
+        totalScore += detectionResults.get("emotion").score * 0.05;
+        totalScore += detectionResults.get("length").score * 0.05;
         
-        // 1. 角色一致性检查 (权重40% - 最重要) ⭐
-        double roleScore = detectRoleInconsistency(aiResponse);
-        totalScore += roleScore * 0.40;
-        if (roleScore > 0) {
-            log.info("角色一致性检测异常，分数: {}, 贡献: {}", 
-                String.format("%.2f", roleScore), String.format("%.2f", roleScore * 0.40));
-        }
-        
-        // 2. 关键词异常检测 (权重25% - 身份暴露等严重问题)
-        double keywordScore = detectKeywordAnomaly(aiResponse);
-        totalScore += keywordScore * 0.25;
-        if (keywordScore > 0) {
-            log.info("关键词异常检测，分数: {}, 贡献: {}", 
-                String.format("%.2f", keywordScore), String.format("%.2f", keywordScore * 0.25));
-        }
-        
-        // 3. 内容相关性检查 (权重15% - 是否切题)
-        double relevanceScore = detectContentRelevance(aiResponse, originalQuery);
-        totalScore += relevanceScore * 0.15;
-        
-        // 4. 语言一致性检查 (权重10% - 语言风格)
-        double languageScore = detectLanguageInconsistency(aiResponse, originalQuery);
-        totalScore += languageScore * 0.10;
-        
-        // 5. 情感一致性检查 (权重5% - 情感色彩)
-        double emotionScore = detectEmotionConsistency(aiResponse, originalQuery);
-        totalScore += emotionScore * 0.05;
-        
-        // 6. 长度检查 (权重5% - 基础检查)
-        double lengthScore = detectLengthAnomaly(aiResponse);
-        totalScore += lengthScore * 0.05;
-        
-        // 计算最终异常分数
+        // 使用sigmoid函数平滑化分数
         double finalScore = Math.min(1.0, 1.0 / (1.0 + Math.exp(-6.0 * (totalScore - 0.5))));
         
-        // 详细日志输出 - 重点关注角色一致性
-        log.info("反思检测详情 - 角色一致性(40%): {}, 关键词(25%): {}, " +
-                "内容相关(15%): {}, 语言(10%): {}, 情感(5%): {}, 长度(5%): {}", 
-                String.format("%.3f", roleScore * 0.40), 
-                String.format("%.3f", keywordScore * 0.25), 
-                String.format("%.3f", relevanceScore * 0.15), 
-                String.format("%.3f", languageScore * 0.10), 
-                String.format("%.3f", emotionScore * 0.05), 
-                String.format("%.3f", lengthScore * 0.05));
-        log.info("总分: {} -> 最终异常分数: {} (阈值: {})", 
-                String.format("%.3f", totalScore), 
-                String.format("%.3f", finalScore), 
-                reflectionConfig.getAnomalyDetection().getAnomalyThreshold());
+        // 收集所有检测到的问题
+        StringBuilder issues = new StringBuilder();
+        for (Map.Entry<String, DetectionResult> entry : detectionResults.entrySet()) {
+            if (entry.getValue().score > 0.2 && !entry.getValue().issue.isEmpty()) {
+                if (issues.length() > 0) issues.append("; ");
+                issues.append(entry.getValue().issue);
+            }
+        }
         
-        // 使用sigmoid函数平滑化分数，避免过于极端
-        return finalScore;
+        // 统一日志输出
+        if (log.isInfoEnabled()) {
+            log.info("反思检测详情 - 角色(40%): {:.3f}, 关键词(25%): {:.3f}, 相关性(15%): {:.3f}, 语言(10%): {:.3f}, 情感(5%): {:.3f}, 长度(5%): {:.3f}",
+                    detectionResults.get("role").score * 0.40,
+                    detectionResults.get("keyword").score * 0.25,
+                    detectionResults.get("relevance").score * 0.15,
+                    detectionResults.get("language").score * 0.10,
+                    detectionResults.get("emotion").score * 0.05,
+                    detectionResults.get("length").score * 0.05);
+            log.info("总分: {:.3f} -> 最终异常分数: {:.3f} (阈值: {})", 
+                    totalScore, finalScore, reflectionConfig.getAnomalyDetection().getAnomalyThreshold());
+        }
+        
+        return new AnomalyAnalysisResult(finalScore, issues.toString());
     }
-    
+
     /**
-     * 检测关键词异常
+     * 统一的角色一致性检测
      */
-    private double detectKeywordAnomaly(String aiResponse) {
-        String response = aiResponse.toLowerCase();
-        List<String> anomalousKeywords = reflectionConfig.getAnomalousKeywords();
+    private DetectionResult detectRoleInconsistencyUnified(String responseLower) {
+        // 1. 严重AI身份暴露
+        String[] aiIdentityTerms = {"我是ai", "我是人工智能", "我是机器人", "我是助手", "我是程序", 
+                                   "语言模型", "gpt", "chatgpt", "大语言模型", "llm", 
+                                   "as an ai", "i am an ai", "artificial intelligence"};
         
+        for (String term : aiIdentityTerms) {
+            if (responseLower.contains(term)) {
+                log.info("检测到严重角色暴露: {}", term);
+                return new DetectionResult(1.0, "严重角色暴露: " + term);
+            }
+        }
+        
+        // 2. 角色扮演暴露
+        String[] rolePlayTerms = {"角色扮演", "我在扮演", "这是角色扮演", "我需要扮演", "role-playing", "i'm playing"};
+        for (String term : rolePlayTerms) {
+            if (responseLower.contains(term)) {
+                return new DetectionResult(0.95, "角色扮演暴露");
+            }
+        }
+        
+        // 3. 技术术语检测
+        String[] techTerms = {"程序", "算法", "代码", "数据库", "系统", "模型", "训练", "API"};
+        int techCount = (int) Arrays.stream(techTerms).mapToLong(term -> 
+            responseLower.split(term, -1).length - 1).sum();
+        
+        if (techCount >= 2) {
+            return new DetectionResult(0.8, "多个技术术语暴露");
+        } else if (techCount == 1) {
+            return new DetectionResult(0.5, "技术术语暴露");
+        }
+        
+        // 4. 过度谦让检测
+        String[] politeTerms = {"很抱歉", "非常抱歉", "深感抱歉", "我不能", "我无法", "我不会"};
+        int politeCount = (int) Arrays.stream(politeTerms).mapToLong(term -> 
+            responseLower.split(term, -1).length - 1).sum();
+        
+        if (politeCount >= 3) {
+            return new DetectionResult(0.7, "过度道歉");
+        } else if (politeCount >= 2) {
+            return new DetectionResult(0.4, "适度谦让");
+        }
+        
+        return new DetectionResult(0.0, "");
+    }
+
+    /**
+     * 统一的关键词异常检测
+     */
+    private DetectionResult detectKeywordAnomalyUnified(String responseLower) {
+        List<String> anomalousKeywords = reflectionConfig.getAnomalousKeywords();
+        StringBuilder matchedKeywords = new StringBuilder();
         int matchCount = 0;
+        
         for (String keyword : anomalousKeywords) {
-            if (response.contains(keyword.toLowerCase())) {
+            if (responseLower.contains(keyword.toLowerCase())) {
                 matchCount++;
-                log.debug("检测到异常关键词: '{}' 在回复中: '{}'", keyword, response.substring(0, Math.min(50, response.length())));
+                if (matchedKeywords.length() > 0) matchedKeywords.append(", ");
+                matchedKeywords.append(keyword);
             }
         }
         
         if (matchCount > 0) {
-            log.info("关键词异常匹配: {}个关键词", matchCount);
+            double score = Math.min(1.0, matchCount * 0.3);
+            String issue = "异常关键词: " + matchedKeywords.toString();
+            log.debug("检测到{}个异常关键词: {}", matchCount, matchedKeywords);
+            return new DetectionResult(score, issue);
         }
         
-        // 异常关键词匹配越多，异常分数越高
-        return Math.min(1.0, matchCount * 0.3);
+        return new DetectionResult(0.0, "");
     }
-    
+
     /**
-     * 检测长度异常
+     * 统一的内容相关性检测
      */
-    private double detectLengthAnomaly(String aiResponse) {
+    private DetectionResult detectContentRelevanceUnified(String responseLower, String queryLower) {
+        // 拒绝回答检测
+        String[] refusalTerms = {"我不知道", "无法回答", "这个问题超出了我的能力", 
+                                "i don't know", "i can't answer", "beyond my capabilities"};
+        
+        for (String term : refusalTerms) {
+            if (responseLower.contains(term)) {
+                return new DetectionResult(0.7, "拒绝回答或表示不知道");
+            }
+        }
+        
+        // 简单重复检测
+        if (responseLower.contains(queryLower) && responseLower.length() < queryLower.length() + 20) {
+            return new DetectionResult(0.6, "简单重复问题");
+        }
+        
+        // 通用回复检测
+        String[] genericTerms = {"很高兴为您服务", "有什么可以帮助您", "请问还有什么问题", "感谢您的提问", "希望能帮到您"};
+        for (String term : genericTerms) {
+            if (responseLower.contains(term) && responseLower.replace(term, "").trim().length() < 10) {
+                return new DetectionResult(0.5, "通用回复，缺乏针对性");
+            }
+        }
+        
+        return new DetectionResult(0.0, "");
+    }
+
+    /**
+     * 统一的语言一致性检测
+     */
+    private DetectionResult detectLanguageInconsistencyUnified(String aiResponse, String originalQuery) {
+        boolean queryHasChinese = containsChinese(originalQuery);
+        boolean responseHasChinese = containsChinese(aiResponse);
+        
+        if (queryHasChinese && !responseHasChinese && aiResponse.length() > 50) {
+            return new DetectionResult(0.7, "语言不一致：中文问题英文回答");
+        }
+        if (!queryHasChinese && responseHasChinese && !originalQuery.toLowerCase().contains("chinese")) {
+            return new DetectionResult(0.7, "语言不一致：英文问题中文回答");
+        }
+        
+        return new DetectionResult(0.0, "");
+    }
+
+    /**
+     * 统一的情感一致性检测
+     */
+    private DetectionResult detectEmotionConsistencyUnified(String responseLower, String queryLower) {
+        boolean queryPositive = containsPositiveWords(queryLower);
+        boolean queryNegative = containsNegativeWords(queryLower);
+        boolean responseNegative = containsNegativeWords(responseLower);
+        
+        if (queryPositive && responseNegative) {
+            return new DetectionResult(0.6, "情感不一致：积极问题消极回答");
+        }
+        
+        if (!queryNegative && (responseLower.contains("抱歉") || responseLower.contains("对不起") || 
+            responseLower.contains("很遗憾") || responseLower.contains("unfortunately"))) {
+            return new DetectionResult(0.5, "过度道歉或消极回应");
+        }
+        
+        return new DetectionResult(0.0, "");
+    }
+
+    /**
+     * 统一的长度异常检测
+     */
+    private DetectionResult detectLengthAnomalyUnified(String aiResponse) {
         int length = aiResponse.length();
         int minLength = reflectionConfig.getAnomalyDetection().getMinResponseLength();
         int maxLength = reflectionConfig.getAnomalyDetection().getMaxResponseLength();
         
         if (length < minLength) {
-            return 0.8; // 太短
+            return new DetectionResult(0.8, "回复过短(" + length + "字符)");
         }
         if (length > maxLength) {
-            return 0.6; // 太长
+            return new DetectionResult(0.6, "回复过长(" + length + "字符)");
         }
-        return 0.0; // 长度正常
+        
+        return new DetectionResult(0.0, "");
     }
-    
-    /**
-     * 检测语言不一致性
-     */
-    private double detectLanguageInconsistency(String aiResponse, String originalQuery) {
-        // 简单的中英文检测
-        boolean queryHasChinese = containsChinese(originalQuery);
-        boolean responseHasChinese = containsChinese(aiResponse);
-        
-        // 如果用户用中文提问，但AI回复全是英文，或反之，则可能存在语言不一致
-        if (queryHasChinese && !responseHasChinese && aiResponse.length() > 50) {
-            return 0.7;
-        }
-        if (!queryHasChinese && responseHasChinese && !originalQuery.toLowerCase().contains("chinese")) {
-            return 0.7;
-        }
-        
-        return 0.0;
-    }
-    
-    /**
-     * 检测角色不一致性 - 增强版本，作为最重要的检测维度
-     */
-    private double detectRoleInconsistency(String aiResponse) {
-        String response = aiResponse.toLowerCase();
-        
-        // 1. 【严重】明确暴露AI身份 - 立即触发重试
-        if (response.contains("我是ai") || response.contains("我是人工智能") || 
-            response.contains("我是机器人") || response.contains("我是助手") ||
-            response.contains("我是程序") || response.contains("语言模型") ||
-            response.contains("gpt") || response.contains("chatgpt") || 
-            response.contains("大语言模型") || response.contains("llm") ||
-            response.contains("as an ai") || response.contains("i am an ai") ||
-            response.contains("artificial intelligence")) {
-            log.info("检测到严重角色暴露: AI身份相关词汇");
-            return 1.0; // 最高异常分数
-        }
-        
-        // 2. 【严重】明确说明在进行角色扮演
-        if (response.contains("角色扮演") || response.contains("我在扮演") || 
-            response.contains("这是角色扮演") || response.contains("我需要扮演") ||
-            response.contains("role-playing") || response.contains("i'm playing")) {
-            return 0.95;
-        }
-        
-        // 3. 【中等】技术术语暴露 - 破坏沉浸感
-        String[] techTerms = {"程序", "算法", "代码", "数据库", "系统", "模型", "训练", "API"};
-        int techTermCount = 0;
-        for (String term : techTerms) {
-            if (response.contains(term)) {
-                techTermCount++;
-            }
-        }
-        if (techTermCount >= 2) {
-            return 0.8; // 多个技术术语
-        } else if (techTermCount == 1) {
-            return 0.5; // 单个技术术语
-        }
-        
-        // 4. 【中等】过度谦让，不符合角色设定
-        String[] overPoliteTerms = {"很抱歉", "非常抱歉", "深感抱歉", "我不能", "我无法", "我不会"};
-        int politeCount = 0;
-        for (String term : overPoliteTerms) {
-            if (response.contains(term)) {
-                politeCount++;
-            }
-        }
-        if (politeCount >= 3) {
-            return 0.7; // 过度道歉
-        } else if (politeCount >= 2) {
-            return 0.4; // 适度谦让
-        }
-        
-        // 5. 【轻微】元认知表达 - 提及自己的思考过程
-        if (response.contains("我认为") || response.contains("我觉得") || 
-            response.contains("据我了解") || response.contains("从我的角度")) {
-            return 0.3;
-        }
-        
-        // 6. 【检查】回复是否过于机械化
-        if (response.startsWith("根据") && (response.contains("信息") || response.contains("数据"))) {
-            return 0.4;
-        }
-        
-        return 0.0; // 角色表现正常
-    }
-    
-    /**
-     * 检测内容相关性 - 通用版本
-     */
-    private double detectContentRelevance(String aiResponse, String originalQuery) {
-        String response = aiResponse.toLowerCase();
-        String query = originalQuery.toLowerCase();
-        
-        // 1. 检测是否完全偏离主题或拒绝回答
-        if (response.contains("我不知道") || response.contains("无法回答") || 
-            response.contains("这个问题超出了我的能力") || response.contains("i don't know") ||
-            response.contains("i can't answer") || response.contains("beyond my capabilities")) {
-            return 0.7;
-        }
-        
-        // 2. 检测是否只是简单重复问题而没有实质回答
-        if (response.contains(query) && response.length() < query.length() + 20) {
-            return 0.6;
-        }
-        
-        // 3. 检测是否回复了完全不相关的通用内容
-        String[] genericResponses = {
-            "很高兴为您服务", "有什么可以帮助您", "请问还有什么问题",
-            "感谢您的提问", "希望能帮到您"
-        };
-        
-        for (String generic : genericResponses) {
-            if (response.contains(generic) && response.replace(generic, "").trim().length() < 10) {
-                return 0.5;
-            }
-        }
-        
-        // 4. 检测回复长度与问题复杂度的匹配性
-        if (query.length() > 20 && response.length() < 10) {
-            return 0.4; // 复杂问题得到过于简单的回答
-        }
-        
-        return 0.0;
-    }
-    
-    /**
-     * 检测情感一致性 - 新增
-     */
-    private double detectEmotionConsistency(String aiResponse, String originalQuery) {
-        String response = aiResponse.toLowerCase();
-        String query = originalQuery.toLowerCase();
-        
-        // 检测情感词汇
-        boolean queryPositive = containsPositiveWords(query);
-        boolean queryNegative = containsNegativeWords(query);
-        boolean responseNegative = containsNegativeWords(response);
-        
-        // 用户积极询问，但AI回复消极
-        if (queryPositive && responseNegative) {
-            return 0.6;
-        }
-        
-        // 用户正常询问，但AI过度道歉或消极
-        if (!queryNegative && (response.contains("抱歉") || response.contains("对不起") || 
-            response.contains("很遗憾") || response.contains("unfortunately"))) {
-            return 0.5;
-        }
-        
-        return 0.0;
-    }
-    
+
     /**
      * 检测积极词汇
      */
     private boolean containsPositiveWords(String text) {
         String[] positiveWords = {"好", "棒", "喜欢", "想要", "需要", "请", "谢谢", "great", "good", "like", "want", "please"};
-        return java.util.Arrays.stream(positiveWords).anyMatch(text::contains);
+        return Arrays.stream(positiveWords).anyMatch(text::contains);
     }
     
     /**
@@ -371,7 +367,7 @@ public class ReflectionAgentServiceImpl implements IReflectionAgentService {
      */
     private boolean containsNegativeWords(String text) {
         String[] negativeWords = {"不", "没有", "不能", "无法", "错误", "失败", "no", "can't", "cannot", "error", "fail"};
-        return java.util.Arrays.stream(negativeWords).anyMatch(text::contains);
+        return Arrays.stream(negativeWords).anyMatch(text::contains);
     }
     
     /**
@@ -387,10 +383,7 @@ public class ReflectionAgentServiceImpl implements IReflectionAgentService {
         log.debug("重新生成查询 - 原查询: {}, 检测问题: {}, 重试次数: {}", 
                  originalQuery.substring(0, Math.min(50, originalQuery.length())), detectedIssue, retryCount);
         
-        // 不再使用AI重新生成查询，直接返回清理后的原始查询
-        // 这样避免了累积系统提示词的问题，同时保持查询的原始意图
         String cleanedQuery = cleanOriginalQuery(originalQuery);
-        
         log.info("重试查询清理完成: {}", cleanedQuery.substring(0, Math.min(100, cleanedQuery.length())));
         return cleanedQuery;
     }
@@ -402,13 +395,19 @@ public class ReflectionAgentServiceImpl implements IReflectionAgentService {
         String cleaned = query;
         
         // 移除所有可能的系统提示词
-        cleaned = cleaned.replaceAll("\\s*\\(请用更清晰的方式回答\\)\\s*", "");
-        cleaned = cleaned.replaceAll("\\s*\\(请用更.*?的方式回答\\)\\s*", "");
-        cleaned = cleaned.replaceAll("\\s*\\(请提供更.*?的回答\\)\\s*", "");
-        cleaned = cleaned.replaceAll("\\s*\\(请.*?回答\\)\\s*", "");
-        cleaned = cleaned.replaceAll("\\s*请用更清晰的方式回答\\s*", "");
-        cleaned = cleaned.replaceAll("\\s*请提供更准确的回答\\s*", "");
-        cleaned = cleaned.replaceAll("\\s*请再试一次\\s*", "");
+        String[] patterns = {
+            "\\s*\\(请用更清晰的方式回答\\)\\s*",
+            "\\s*\\(请用更.*?的方式回答\\)\\s*",
+            "\\s*\\(请提供更.*?的回答\\)\\s*",
+            "\\s*\\(请.*?回答\\)\\s*",
+            "\\s*请用更清晰的方式回答\\s*",
+            "\\s*请提供更准确的回答\\s*",
+            "\\s*请再试一次\\s*"
+        };
+        
+        for (String pattern : patterns) {
+            cleaned = cleaned.replaceAll(pattern, "");
+        }
         
         // 清理多余的空格
         cleaned = cleaned.replaceAll("\\s+", " ").trim();
@@ -419,209 +418,19 @@ public class ReflectionAgentServiceImpl implements IReflectionAgentService {
     @Override
     public String generateFinalResponse(String originalQuery, String aiResponse) {
         log.debug("生成最终回复");
-        
-        // 对于正常的回复，可以进行适当的优化和总结
-        // 这里简单返回原回复，实际可以根据需要进行优化
         return aiResponse.trim();
     }
-    
+
     /**
-     * 分析检测到的具体问题
+     * 异常分析结果封装类
      */
-    private String analyzeDetectedIssue(String aiResponse, double anomalyScore) {
-        // 只要超过基础阈值就开始分析问题，不设置0.4的限制
-        if (anomalyScore <= reflectionConfig.getAnomalyDetection().getAnomalyThreshold()) {
-            return "";
+    private static class AnomalyAnalysisResult {
+        final double totalScore;
+        final String detectedIssue;
+        
+        AnomalyAnalysisResult(double totalScore, String detectedIssue) {
+            this.totalScore = totalScore;
+            this.detectedIssue = detectedIssue;
         }
-        
-        StringBuilder issues = new StringBuilder();
-        
-        // 1. 检查角色一致性问题（最重要）
-        double roleScore = detectRoleInconsistency(aiResponse);
-        if (roleScore > 0.5) {
-            if (issues.length() > 0) issues.append("; ");
-            issues.append("严重角色暴露或角色不一致");
-        } else if (roleScore > 0.2) {
-            if (issues.length() > 0) issues.append("; ");
-            issues.append("轻微角色不一致");
-        }
-        
-        // 2. 检查异常关键词
-        for (String keyword : reflectionConfig.getAnomalousKeywords()) {
-            if (aiResponse.toLowerCase().contains(keyword.toLowerCase())) {
-                if (issues.length() > 0) issues.append("; ");
-                issues.append("包含异常关键词: ").append(keyword);
-            }
-        }
-        
-        // 3. 检查长度异常
-        int length = aiResponse.length();
-        if (length < reflectionConfig.getAnomalyDetection().getMinResponseLength()) {
-            if (issues.length() > 0) issues.append("; ");
-            issues.append("回复过短(").append(length).append("字符)");
-        }
-        
-        if (length > reflectionConfig.getAnomalyDetection().getMaxResponseLength()) {
-            if (issues.length() > 0) issues.append("; ");
-            issues.append("回复过长(").append(length).append("字符)");
-        }
-        
-        // 4. 检查重复内容
-        if (hasRepeatedContent(aiResponse)) {
-            if (issues.length() > 0) issues.append("; ");
-            issues.append("内容重复或循环");
-        }
-        
-        // 4. 检查格式问题
-        if (hasPoorFormatting(aiResponse)) {
-            if (issues.length() > 0) issues.append("; ");
-            issues.append("格式混乱或结构不清");
-        }
-        
-        // 5. 检查逻辑一致性
-        if (hasLogicalInconsistency(aiResponse)) {
-            if (issues.length() > 0) issues.append("; ");
-            issues.append("逻辑不一致或自相矛盾");
-        }
-        
-        // 6. 检查专业性
-        if (lacksProfessionalism(aiResponse)) {
-            if (issues.length() > 0) issues.append("; ");
-            issues.append("缺乏专业性或过于随意");
-        }
-        
-        // 7. 检查完整性
-        if (isIncompleteResponse(aiResponse)) {
-            if (issues.length() > 0) issues.append("; ");
-            issues.append("回复不完整或突然中断");
-        }
-        
-        // 8. 检查安全性
-        if (containsUnsafeContent(aiResponse)) {
-            if (issues.length() > 0) issues.append("; ");
-            issues.append("包含不当或敏感内容");
-        }
-        
-        return issues.toString();
-    }
-    
-    /**
-     * 检测重复内容
-     */
-    private boolean hasRepeatedContent(String text) {
-        String[] sentences = text.split("[。！？.!?]");
-        if (sentences.length < 3) return false;
-        
-        for (int i = 0; i < sentences.length - 1; i++) {
-            for (int j = i + 1; j < sentences.length; j++) {
-                if (sentences[i].trim().equals(sentences[j].trim()) && sentences[i].trim().length() > 10) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    
-    /**
-     * 检测格式问题
-     */
-    private boolean hasPoorFormatting(String text) {
-        // 检测是否有过多的空格、换行或特殊字符
-        long spaceCount = text.chars().filter(c -> c == ' ').count();
-        long totalChars = text.length();
-        
-        if (totalChars > 0 && spaceCount / (double) totalChars > 0.3) {
-            return true;
-        }
-        
-        // 检测是否有不匹配的括号或引号
-        int openBrackets = text.length() - text.replace("(", "").length();
-        int closeBrackets = text.length() - text.replace(")", "").length();
-        
-        return Math.abs(openBrackets - closeBrackets) > 2;
-    }
-    
-    /**
-     * 检测逻辑不一致性
-     */
-    private boolean hasLogicalInconsistency(String text) {
-        String lower = text.toLowerCase();
-        
-        // 检测矛盾表述
-        if ((lower.contains("是") && lower.contains("不是")) ||
-            (lower.contains("可以") && lower.contains("不可以")) ||
-            (lower.contains("有") && lower.contains("没有"))) {
-            return true;
-        }
-        
-        // 检测时态混乱
-        if (lower.contains("昨天") && lower.contains("明天") && text.length() < 100) {
-            return true;
-        }
-        
-        return false;
-    }
-    
-    /**
-     * 检测专业性缺失
-     */
-    private boolean lacksProfessionalism(String text) {
-        String lower = text.toLowerCase();
-        
-        // 检测过于口语化或不当表达
-        String[] unprofessionalWords = {
-            "哈哈", "呵呵", "嘻嘻", "哎呀", "我去", "靠", "牛逼", "屌", "lol", "lmao"
-        };
-        
-        for (String word : unprofessionalWords) {
-            if (lower.contains(word)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    /**
-     * 检测回复完整性
-     */
-    private boolean isIncompleteResponse(String text) {
-        String trimmed = text.trim();
-        
-        // 检测是否以不完整的方式结束
-        if (trimmed.endsWith("...") || trimmed.endsWith("等等") || 
-            trimmed.endsWith("and so on") || trimmed.endsWith("etc")) {
-            return true;
-        }
-        
-        // 检测是否在句子中间突然结束
-        if (!trimmed.endsWith("。") && !trimmed.endsWith("！") && 
-            !trimmed.endsWith("？") && !trimmed.endsWith(".") && 
-            !trimmed.endsWith("!") && !trimmed.endsWith("?") && 
-            trimmed.length() > 20) {
-            return true;
-        }
-        
-        return false;
-    }
-    
-    /**
-     * 检测不安全内容
-     */
-    private boolean containsUnsafeContent(String text) {
-        String lower = text.toLowerCase();
-        
-        // 检测可能的敏感内容
-        String[] sensitiveWords = {
-            "密码", "账号", "银行卡", "身份证", "password", "account", "credit card"
-        };
-        
-        for (String word : sensitiveWords) {
-            if (lower.contains(word)) {
-                return true;
-            }
-        }
-        
-        return false;
     }
 }

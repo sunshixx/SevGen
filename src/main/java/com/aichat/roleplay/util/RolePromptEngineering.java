@@ -1,6 +1,10 @@
 package com.aichat.roleplay.util;
 
 import com.aichat.roleplay.model.Role;
+import com.aichat.roleplay.service.RagService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -10,6 +14,11 @@ import org.springframework.util.StringUtils;
  */
 @Service
 public class RolePromptEngineering {
+
+    private static final Logger logger = LoggerFactory.getLogger(RolePromptEngineering.class);
+
+    @Autowired
+    private RagService ragService;
 
     /**
      * 根据角色类型构建优化的prompt
@@ -45,6 +54,9 @@ public class RolePromptEngineering {
                 buildGenericRolePrompt(promptBuilder, role);
         }
         
+        // 添加RAG知识背景（在角色设定后，行为规范前）
+        addRagKnowledgeBackground(promptBuilder, role, userMessage);
+        
         // 添加通用的行为规范
         addCommonBehaviorGuidelines(promptBuilder);
         
@@ -59,7 +71,7 @@ public class RolePromptEngineering {
         
             // 添加回复指令（单独一行，便于LLM区分）
             promptBuilder.append("\n[指令] 现在请以").append(role.getName()).append("的身份回复用户的问题。只输出").append(role.getName()).append("的回复内容，不要重复用户的问题。\n");
-        
+
         return promptBuilder.toString();
     }
 
@@ -200,6 +212,28 @@ public class RolePromptEngineering {
             promptBuilder.append("角色设定：").append(role.getCharacterPrompt()).append("\n");
         }
         promptBuilder.append("\n直接承认自己是").append(role.getName()).append("，保持角色特色\n");
+    }
+
+    /**
+     * 添加RAG知识背景
+     * 根据角色ID和用户消息检索相关知识内容
+     */
+    private void addRagKnowledgeBackground(StringBuilder promptBuilder, Role role, String userMessage) {
+        try {
+            // 使用角色ID检索相关知识内容，限制返回3个最相关的结果
+            String ragContent = ragService.getRoleRelevantContent(role.getId(), userMessage, 3);
+            
+            if (StringUtils.hasText(ragContent)) {
+                logger.debug("为角色 {} 检索到RAG知识内容，长度: {}", role.getName(), ragContent.length());
+                promptBuilder.append("\n【角色知识背景】：\n");
+                promptBuilder.append(ragContent).append("\n");
+            } else {
+                logger.debug("角色 {} 未找到相关RAG知识内容", role.getName());
+            }
+        } catch (Exception e) {
+            // RAG检索失败不应影响正常对话流程
+            logger.warn("为角色 {} 检索RAG知识时发生错误: {}", role.getName(), e.getMessage(), e);
+        }
     }
 
     /**

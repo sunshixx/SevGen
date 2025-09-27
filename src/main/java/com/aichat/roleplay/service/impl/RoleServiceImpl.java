@@ -2,6 +2,7 @@ package com.aichat.roleplay.service.impl;
 
 import com.aichat.roleplay.mapper.RoleMapper;
 import com.aichat.roleplay.model.Role;
+import com.aichat.roleplay.service.IAiChatService;
 import com.aichat.roleplay.service.IRoleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,15 +24,12 @@ public class RoleServiceImpl implements IRoleService {
     private static final Logger log = LoggerFactory.getLogger(RoleServiceImpl.class);
 
     private final RoleMapper roleMapper;
+    private final IAiChatService aiChatService;
 
-    /**
-     * 构造函数注入，遵循依赖倒置原则
-     *
-     * @param roleMapper 角色数据访问接口
-     */
     @Autowired
-    public RoleServiceImpl(RoleMapper roleMapper) {
+    public RoleServiceImpl(RoleMapper roleMapper, IAiChatService aiChatService) {
         this.roleMapper = roleMapper;
+        this.aiChatService = aiChatService;
     }
 
     @Override
@@ -129,6 +127,7 @@ public class RoleServiceImpl implements IRoleService {
     @Override
     @Transactional(readOnly = true)
     public boolean existsByName(String name) {
+        log.debug("检查角色名称是否存在: {}", name);
         return roleMapper.existsByName(name);
     }
 }
