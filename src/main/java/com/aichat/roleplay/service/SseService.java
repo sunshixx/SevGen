@@ -15,38 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class SseService {
-    // 获取当前用户ID（通过 chatId 查询）
-    private Long getCurrentUserId(Long chatId) {
-        try {
-            return chatMapper.selectById(chatId).getUserId();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    // 提取真实用户消息（去除重试标记和累积提示）
-    private String extractActualUserMessage(String message) {
-        String cleaned = message;
-        // 去除 RETRY 前缀
-        if (cleaned.startsWith("RETRY")) {
-            int spaceIndex = cleaned.indexOf(' ');
-            if (spaceIndex > 0) cleaned = cleaned.substring(spaceIndex + 1);
-        }
-        // 去除 "用户问题：" 前缀
-        if (cleaned.startsWith("用户问题：")) {
-            cleaned = cleaned.substring("用户问题：".length());
-        }
-        // 去除 meta 指令（如“请用更清晰的方式回答”、“[指令]”等）
-        cleaned = cleaned.replaceAll("\\s*\\(请用更.*?回答\\)\\s*", " ")
-                .replaceAll("\\s*请用更.*?回答\\s*", " ")
-                .replaceAll("^用户问题：", "")
-                .replaceAll("^\\[指令].*", "")
-                .replaceAll("\\s+", " ").trim();
-        return cleaned;
-    }
     private static final Logger log = LoggerFactory.getLogger(SseService.class);
 
     @Autowired private IAiChatService aiChatService;
@@ -59,94 +32,241 @@ public class SseService {
     @Resource private ChatMapper chatMapper;
     @Resource private MessageMapper messageMapper;
 
+    // 主入口：SSE流式对话
     public SseEmitter stream(Long chatId, Long roleId, String userMessage) {
-        return streamWithReflection(chatId, roleId, userMessage, 0);
+        log.info("SSE流式对话 - chatId:{}, roleId:{}", chatId, roleId);
+        SseEmitter emitter = new SseEmitter(60000L);
+        
+        try {
+            processStreamRequest(chatId, roleId, userMessage, 0, emitter, null, true);
+        } catch (Exception e) {
+            log.error("SSE处理失败", e);
+            handleStreamError(emitter, e);
+        }
+        
+        return emitter;
     }
 
-    // 主流式对话入口
-    private SseEmitter streamWithReflection(Long chatId, Long roleId, String originalUserMessage, int currentRetryCount) {
-        log.info("SSE流式对话 - chatId:{}, roleId:{}, retry:{}", chatId, roleId, currentRetryCount);
-        SseEmitter emitter = new SseEmitter(60000L);
+    // 同步获取AI响应文本（用于语音服务）
+    public String getAiResponseText(Long chatId, Long roleId, String userMessage, boolean saveMessages) {
+        log.info("同步获取AI响应文本 - chatId:{}, roleId:{}, saveMessages:{}", chatId, roleId, saveMessages);
+        
+        try {
+            CompletableFuture<String> responseFuture = new CompletableFuture<>();
+            processStreamRequest(chatId, roleId, userMessage, 0, null, responseFuture, saveMessages);
+            
+            return responseFuture.get(30, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("同步获取AI响应失败", e);
+            throw new RuntimeException("获取AI响应失败: " + e.getMessage(), e);
+        }
+    }
 
+    // 多角色聊天专用：根据角色提示词和用户消息生成响应（不保存到数据库）
+    public String generateRoleResponse(String rolePrompt, String userMessage, String chatHistory) {
+        log.info("多角色聊天生成响应 - rolePrompt长度:{}, userMessage长度:{}", 
+                rolePrompt != null ? rolePrompt.length() : 0, 
+                userMessage != null ? userMessage.length() : 0);
+        
+        try {
+            CompletableFuture<String> responseFuture = new CompletableFuture<>();
+            
+            // 构建完整的提示词
+            StringBuilder promptBuilder = new StringBuilder();
+            
+            if (rolePrompt != null && !rolePrompt.isEmpty()) {
+                promptBuilder.append("你是一个AI角色扮演助手。请严格按照以下角色设定进行回复：\n");
+                promptBuilder.append(rolePrompt).append("\n\n");
+            }
+            
+            if (chatHistory != null && !chatHistory.isEmpty()) {
+                promptBuilder.append("聊天历史：\n");
+                promptBuilder.append(chatHistory).append("\n\n");
+            }
+            
+            promptBuilder.append("用户说：").append(userMessage).append("\n\n");
+            promptBuilder.append("请以角色的身份回复（不要说你是AI或角色扮演，直接以角色身份回应）：");
+            
+            String fullPrompt = promptBuilder.toString();
+            log.debug("多角色聊天构建的完整提示词: {}", fullPrompt);
+            
+            StringBuilder aiAnswer = new StringBuilder();
+            
+            aiChatService.generateStreamResponseDirect(fullPrompt, token -> {
+                try {
+                    if ("[DONE]".equals(token)) {
+                        String finalResponse = aiAnswer.toString().trim();
+                        log.debug("多角色响应生成完成，长度: {}", finalResponse.length());
+                        responseFuture.complete(finalResponse.isEmpty() ? "抱歉，我现在无法回应。" : finalResponse);
+                    } else if ("[ERROR]".equals(token)) {
+                        log.error("多角色响应生成出错");
+                        responseFuture.completeExceptionally(new RuntimeException("生成响应时出现错误"));
+                    } else {
+                        aiAnswer.append(token);
+                    }
+                } catch (Exception e) {
+                    log.error("处理多角色响应token失败", e);
+                    responseFuture.completeExceptionally(e);
+                }
+            });
+            
+            return responseFuture.get(30, TimeUnit.SECONDS);
+            
+        } catch (Exception e) {
+            log.error("多角色聊天生成响应失败", e);
+            return "抱歉，生成响应时出现了问题。";
+        }
+    }
+
+    // 统一的流式请求处理方法
+    private void processStreamRequest(Long chatId, Long roleId, String originalUserMessage, int retryCount, 
+                                    SseEmitter emitter, CompletableFuture<String> responseFuture, boolean saveMessages) {
         try {
             String actualUserMessage = extractActualUserMessage(originalUserMessage);
             List<Message> chatHistory = messageService.findByChatId(chatId);
 
-            Message userMsg = Message.builder()
-                    .chatId(chatId).roleId(roleId)
-                    .senderType("user").content(actualUserMessage).build();
-            messageMapper.insert(userMsg);
+            // 保存用户消息（仅在第一次调用且需要保存时）
+            if (retryCount == 0 && saveMessages) {
+                Message userMsg = Message.builder()
+                        .chatId(chatId).roleId(roleId)
+                        .senderType("user").content(actualUserMessage).build();
+                messageMapper.insert(userMsg);
+            }
 
             Role role = roleMapper.findById(roleId);
-            if(role == null) throw new RuntimeException("角色不存在");
+            if (role == null) {
+                String errorMsg = "角色不存在";
+                handleProcessingError(emitter, responseFuture, new RuntimeException(errorMsg));
+                return;
+            }
 
             StringBuilder aiAnswer = new StringBuilder();
             String optimizedPrompt = rolePromptEngineering.buildOptimizedPrompt(role, actualUserMessage, buildChatHistory(chatHistory));
 
             aiChatService.generateStreamResponseDirect(optimizedPrompt, token -> {
                 try {
-                    log.debug("SSE发送数据: {}", token);
                     if ("[DONE]".equals(token)) {
                         String cleanedResponse = cleanAiResponse(aiAnswer.toString(), actualUserMessage);
-                        emitter.send("data: " + token + "\n\n");
-                        handleAiResponseComplete(emitter, chatId, roleId, actualUserMessage, cleanedResponse, currentRetryCount);
+                        
+                        // 发送完成标记（仅SSE模式）
+                        if (emitter != null) {
+                            emitter.send("data: " + token + "\n\n");
+                        }
+                        
+                        // 统一的反思处理
+                        handleResponseWithReflection(chatId, roleId, actualUserMessage, cleanedResponse, 
+                                                   retryCount, emitter, responseFuture, saveMessages);
                     } else if (!"[ERROR]".equals(token)) {
                         aiAnswer.append(token);
-                        emitter.send("data: " + token + "\n\n");
+                        
+                        // 发送token（仅SSE模式）
+                        if (emitter != null) {
+                            emitter.send("data: " + token + "\n\n");
+                        }
                     } else {
-                        emitter.completeWithError(new RuntimeException("AI回复错误"));
+                        handleProcessingError(emitter, responseFuture, new RuntimeException("AI回复错误"));
                     }
                 } catch (Exception e) {
-                    log.error("SSE发送失败", e);
-                    emitter.completeWithError(e);
+                    log.error("处理AI响应token失败", e);
+                    handleProcessingError(emitter, responseFuture, e);
                 }
             });
 
         } catch (Exception e) {
-            log.error("SSE处理失败", e);
-            try {
-                emitter.send("data: [ERROR] " + e.getMessage() + "\n\n");
-                emitter.completeWithError(e);
-            } catch (Exception sendEx) {
-                log.error("发送错误失败", sendEx);
-            }
+            log.error("处理流式请求失败", e);
+            handleProcessingError(emitter, responseFuture, e);
         }
-        return emitter;
     }
 
-    // 反思分析处理
-    private void handleAiResponseComplete(SseEmitter emitter, Long chatId, Long roleId, String originalQuery, String aiResponse, int retryCount) {
+    // 统一的反思处理方法
+    private void handleResponseWithReflection(Long chatId, Long roleId, String originalQuery, String aiResponse, 
+                                            int retryCount, SseEmitter emitter, CompletableFuture<String> responseFuture, boolean saveMessages) {
         try {
             ReflectionResult result = reflectionAgentService.reflect(originalQuery, aiResponse, chatId, roleId, retryCount);
 
             if (result.needsRetry()) {
                 if (result.getRetryCount() >= 3) {
-                    // 兜底回复
-                    String fallback = "很抱歉，我的思绪飞上了天～请尝试重新提问或稍后再试。";
-                    saveAiMessage(chatId, roleId, fallback);
-                    emitter.send("data: " + fallback + "\n\n");
-                    emitter.send("data: [ERROR] 达到最大重试次数\n\n");
-                    emitter.complete();
+                    log.warn("达到最大重试次数，返回当前响应");
+                    finishProcessing(chatId, roleId, aiResponse, emitter, responseFuture, saveMessages, "[ERROR] 达到最大重试次数");
                     return;
                 }
+
+                // 记录反思日志
                 Long userId = getCurrentUserId(chatId);
                 reflectionLogService.saveReflectionLog(chatId, roleId, userId, originalQuery, aiResponse, result, 0);
 
-                emitter.send("data: [RETRY] 重新生成中...\n\n");
-                performRetry(emitter, chatId, roleId, result.getRegeneratedQuery(), result.getRetryCount());
+                log.info("反思建议重试，执行第{}次重试", result.getRetryCount());
+                
+                // 发送重试提示（仅SSE模式）
+                if (emitter != null) {
+                    emitter.send("data: [RETRY] 重新生成中...\n\n");
+                }
+                
+                // 递归重试
+                processStreamRequest(chatId, roleId, result.getRegeneratedQuery(), result.getRetryCount(), 
+                                   emitter, responseFuture, saveMessages);
 
             } else if (result.isSuccess()) {
-                saveAiMessage(chatId, roleId, aiResponse);
-                emitter.complete();
+                finishProcessing(chatId, roleId, aiResponse, emitter, responseFuture, saveMessages, null);
             } else {
+                // 记录反思日志
                 Long userId = getCurrentUserId(chatId);
                 reflectionLogService.saveReflectionLog(chatId, roleId, userId, originalQuery, aiResponse, result, 0);
-                saveAiMessage(chatId, roleId, aiResponse);
-                emitter.send("data: [ERROR] " + result.getErrorMessage() + "\n\n");
-                emitter.complete();
+                
+                log.warn("反思检测到问题但不重试: {}", result.getErrorMessage());
+                finishProcessing(chatId, roleId, aiResponse, emitter, responseFuture, saveMessages, result.getErrorMessage());
             }
         } catch (Exception e) {
             log.error("反思处理异常", e);
+            // 即使反思失败，也返回AI响应
+            finishProcessing(chatId, roleId, aiResponse, emitter, responseFuture, saveMessages, null);
+        }
+    }
+
+    // 统一的完成处理方法
+    private void finishProcessing(Long chatId, Long roleId, String aiResponse, SseEmitter emitter, 
+                                CompletableFuture<String> responseFuture, boolean saveMessages, String errorMessage) {
+        try {
+            // 保存AI消息
+            if (saveMessages) {
+                saveAiMessage(chatId, roleId, aiResponse);
+            }
+
+            // 处理SSE响应
+            if (emitter != null) {
+                if (errorMessage != null) {
+                    emitter.send("data: [ERROR] " + errorMessage + "\n\n");
+                }
+                emitter.complete();
+            }
+
+            // 处理同步响应
+            if (responseFuture != null) {
+                responseFuture.complete(aiResponse);
+            }
+        } catch (Exception e) {
+            log.error("完成处理失败", e);
+            handleProcessingError(emitter, responseFuture, e);
+        }
+    }
+
+    // 统一的错误处理方法
+    private void handleProcessingError(SseEmitter emitter, CompletableFuture<String> responseFuture, Exception e) {
+        if (emitter != null) {
+            handleStreamError(emitter, e);
+        }
+        if (responseFuture != null) {
+            responseFuture.completeExceptionally(e);
+        }
+    }
+
+    // SSE错误处理
+    private void handleStreamError(SseEmitter emitter, Exception e) {
+        try {
+            emitter.send("data: [ERROR] " + e.getMessage() + "\n\n");
+            emitter.completeWithError(e);
+        } catch (Exception sendEx) {
+            log.error("发送错误失败", sendEx);
             emitter.completeWithError(e);
         }
     }
@@ -163,57 +283,41 @@ public class SseService {
         }
     }
 
-    // 执行重试
-    private void performRetry(SseEmitter emitter, Long chatId, Long roleId, String retryQuery, int retryCount) {
+    // 获取当前用户ID
+    private Long getCurrentUserId(Long chatId) {
         try {
-            String cleanedQuery = extractActualUserMessage(retryQuery);
-            List<Message> chatHistory = messageService.findByChatId(chatId);
-            Role role = roleMapper.findById(roleId);
-
-            StringBuilder newAiAnswer = new StringBuilder();
-            String optimizedPrompt = rolePromptEngineering.buildOptimizedPrompt(role, cleanedQuery, buildChatHistory(chatHistory));
-
-            aiChatService.generateStreamResponseDirect(optimizedPrompt, token -> {
-                try {
-                    if ("[DONE]".equals(token)) {
-                        String cleanedResponse = cleanAiResponse(newAiAnswer.toString(), cleanedQuery);
-                        emitter.send("data: " + token + "\n\n");
-                        handleAiResponseComplete(emitter, chatId, roleId, cleanedQuery, cleanedResponse, retryCount);
-                    } else if (!"[ERROR]".equals(token)) {
-                        newAiAnswer.append(token);
-                        emitter.send("data: " + token + "\n\n");
-                    } else {
-                        emitter.completeWithError(new RuntimeException("重试失败"));
-                    }
-                } catch (Exception e) {
-                    emitter.completeWithError(e);
-                }
-            });
+            return chatMapper.selectById(chatId).getUserId();
         } catch (Exception e) {
-            log.error("重试失败", e);
-            emitter.completeWithError(e);
+            return null;
         }
     }
 
-
-    // 构建结构化且有价值的聊天历史
-    private String buildChatHistory(List<Message> history) {
-        if (history == null || history.isEmpty()){
-            return null;
+    // 提取真实用户消息
+    private String extractActualUserMessage(String message) {
+        String cleaned = message;
+        if (cleaned.startsWith("RETRY")) {
+            int spaceIndex = cleaned.indexOf(' ');
+            if (spaceIndex > 0) cleaned = cleaned.substring(spaceIndex + 1);
         }
+        return removeAccumulatedPrompts(cleaned);
+    }
+
+    // 移除累积的提示词
+    private String removeAccumulatedPrompts(String message) {
+        return message.replaceAll("\\s*\\(请用更.*?回答\\)\\s*", " ")
+                     .replaceAll("\\s*请用更.*?回答\\s*", " ")
+                     .replaceAll("\\s+", " ").trim();
+    }
+
+    // 构建聊天历史（用于 prompt）
+    private String buildChatHistory(List<Message> history) {
+        if (history == null || history.isEmpty()) return null;
         StringBuilder sb = new StringBuilder();
         for (Message msg : history) {
-            // 过滤无意义闲聊（如内容为空、长度极短、仅表情、仅打招呼等）
-            String content = msg.getContent();
-            if (content == null || content.trim().isEmpty()) continue;
-            String lower = content.trim().toLowerCase();
-            if (lower.matches("^(hi|hello|你好|在吗|ok|嗯|哦|哈喽|hello!|hi!|hello。|hi。|hello，|hi，|hello~|hi~|hello。|hi。|hello。|hi。|[\uD83D\uDE00-\uD83D\uDE4F]+)$")) continue;
-            if (content.length() < 2) continue;
-            // 结构化拼接
-            String role = "ai".equals(msg.getSenderType()) ? "ai" : "user";
-            sb.append("role: ").append(role).append(", content: ").append(content.replaceAll("\n", " ")).append("\n");
+            String sender = "ai".equals(msg.getSenderType()) ? "AI" : "用户";
+            sb.append(sender).append(": ").append(msg.getContent()).append("\n");
         }
-        return sb.length() == 0 ? null : sb.toString().trim();
+        return sb.toString().trim();
     }
 
     // 清理AI回复

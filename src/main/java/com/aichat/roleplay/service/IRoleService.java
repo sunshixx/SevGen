@@ -7,8 +7,6 @@ import java.util.Optional;
 
 /**
  * 角色服务接口
- * 遵循SOLID原则中的接口隔离原则
- * 定义角色相关的业务操作
  */
 public interface IRoleService {
 
