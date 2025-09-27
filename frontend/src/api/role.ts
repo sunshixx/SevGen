@@ -1,11 +1,30 @@
 import request from '@/utils/request'
 import type { ApiResponse, Role } from '@/types'
 
+// API级别的缓存
+let publicRolesCache: ApiResponse<Role[]> | null = null
+let cacheTimestamp = 0
+const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
+
 // 角色相关API
 export const roleAPI = {
-  // 获取所有公开角色
+  // 获取所有公开角色（带缓存）
   getAllPublicRoles: (): Promise<ApiResponse<Role[]>> => {
-    return request.get('/roles')
+    const now = Date.now()
+    
+    // 如果缓存存在且未过期，直接返回缓存数据
+    if (publicRolesCache && (now - cacheTimestamp < CACHE_DURATION)) {
+      console.log('使用角色API缓存数据')
+      return Promise.resolve(publicRolesCache)
+    }
+    
+    // 否则请求新数据并缓存
+    console.log('请求新的角色数据')
+    return request.get('/roles').then(response => {
+      publicRolesCache = response
+      cacheTimestamp = now
+      return response
+    })
   },
 
   // 搜索角色
@@ -41,5 +60,12 @@ export const roleAPI = {
   // 删除角色
   deleteRole: (id: number): Promise<ApiResponse> => {
     return request.delete(`/roles/${id}`)
+  },
+
+  // 清理角色缓存
+  clearCache: () => {
+    publicRolesCache = null
+    cacheTimestamp = 0
+    console.log('角色API缓存已清理')
   }
 }

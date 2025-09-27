@@ -166,14 +166,14 @@ const selectedCategory = ref('')
 
 // 页面初始化
 onMounted(async () => {
+  const startTime = Date.now()
   console.log('Home组件挂载，开始获取角色数据')
-  console.log('roleStore:', roleStore)
-  console.log('roleStore.fetchRoles:', roleStore.fetchRoles)
   
   try {
     await roleStore.fetchRoles()
-    console.log('角色数据获取完成，角色数量:', roleStore.roles?.length || 0)
-    console.log('角色数据:', roleStore.roles)
+    const endTime = Date.now()
+    console.log(`角色数据获取完成，耗时: ${endTime - startTime}ms`)
+    console.log('角色数量:', roleStore.roles?.length || 0)
     console.log('分类数据:', roleStore.categories)
   } catch (error) {
     console.error('获取角色数据时出错:', error)

@@ -56,8 +56,7 @@ public class VoiceServiceImpl implements VoiceService {
             logger.info("语音转文字完成: " + transcribedText);
 
             messageService.saveVoiceMessage(chatId, roleId, "user", userAudioUrl, transcribedText, null);
-            
-            // 阶段3：AI对话
+
             aiResponse = processWithAI(transcribedText);
             logger.info("AI回复: " + aiResponse);
             
