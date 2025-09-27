@@ -17,6 +17,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 @Service
@@ -41,78 +43,6 @@ public class VoiceServiceImpl implements VoiceService {
     
     @Value("${langchain4j.open-ai.chat-model.base-url:https://openai.qiniu.com}")
     private String baseUrl;
-    
-    @Override
-    public byte[] processVoiceChat(MultipartFile audioFile) {
-        return processVoiceChat(audioFile, null);
-    }
-    
-    @Override
-    public byte[] processVoiceChat(MultipartFile audioFile, String originalFormat) {
-        try {
-            long startTime = System.currentTimeMillis();
-            logger.info("开始并行化语音对话处理，文件大小: " + audioFile.getSize() + " bytes");
-            
-            // 阶段1：并行上传和ASR处理
-            CompletableFuture<String> uploadFuture = CompletableFuture.supplyAsync(() -> {
-                try {
-                    long uploadStart = System.currentTimeMillis();
-                    String audioUrl = fileStorageService.uploadAudioFile(audioFile, audioFile.getOriginalFilename());
-                    long uploadTime = System.currentTimeMillis() - uploadStart;
-                    logger.info("文件上传完成，耗时: " + uploadTime + "ms, URL: " + audioUrl);
-                    return audioUrl;
-                } catch (Exception e) {
-                    logger.severe("文件上传失败: " + e.getMessage());
-                    throw new RuntimeException("文件上传失败", e);
-                }
-            });
-
-            // 阶段2：基于上传结果进行ASR处理
-            CompletableFuture<String> asrFuture = uploadFuture.thenCompose(audioUrl -> 
-                CompletableFuture.supplyAsync(() -> {
-                    try {
-                        long asrStart = System.currentTimeMillis();
-                        String transcribedText = speechToTextWithModel(audioUrl, audioFile.getOriginalFilename());
-                        long asrTime = System.currentTimeMillis() - asrStart;
-                        logger.info("ASR处理完成，耗时: " + asrTime + "ms, 结果: " + transcribedText);
-                        return transcribedText;
-                    } catch (Exception e) {
-                        logger.severe("ASR处理失败: " + e.getMessage());
-                        throw new RuntimeException("ASR处理失败", e);
-                    }
-                })
-            );
-
-
-            CompletableFuture<byte[]> ttsFuture = asrFuture.thenCompose(aiResponse ->
-                CompletableFuture.supplyAsync(() -> {
-                    try {
-                        long ttsStart = System.currentTimeMillis();
-                        byte[] audioResponse = textToSpeechWithModel(aiResponse);
-                        long ttsTime = System.currentTimeMillis() - ttsStart;
-                        logger.info("TTS处理完成，耗时: " + ttsTime + "ms, 音频大小: " + audioResponse.length + " bytes");
-                        return audioResponse;
-                    } catch (Exception e) {
-                        logger.severe("TTS处理失败: " + e.getMessage());
-                        throw new RuntimeException("TTS处理失败", e);
-                    }
-                })
-            );
-
-
-            byte[] result = ttsFuture.get(30, TimeUnit.SECONDS);
-            
-            long totalTime = System.currentTimeMillis() - startTime;
-            logger.info("并行化语音对话处理完成，总耗时: " + totalTime + "ms");
-            
-            return result;
-            
-        } catch (Exception e) {
-            logger.severe("并行化语音对话处理失败: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("语音对话处理失败", e);
-        }
-    }
 
 
     @Override
@@ -120,21 +50,25 @@ public class VoiceServiceImpl implements VoiceService {
         try {
             long startTime = System.currentTimeMillis();
             logger.info("开始带消息记录的语音对话处理，聊天ID: " + chatId + ", 角色ID: " + roleId);
-
+            
+            // 声明变量用于保存中间结果
             String userAudioUrl = null;
             String transcribedText = null;
             String aiResponse = null;
             String aiAudioUrl = null;
-
+            
+            // 阶段1：上传用户音频文件
             userAudioUrl = fileStorageService.uploadAudioFile(audioFile, audioFile.getOriginalFilename());
             logger.info("用户音频上传完成，URL: " + userAudioUrl);
-
+            
+            // 阶段2：语音转文字
             transcribedText = speechToTextWithModel(userAudioUrl, audioFile.getOriginalFilename());
             logger.info("语音转文字完成: " + transcribedText);
-
-            // 保存用户语音消息（包含转录文本）
+            
+            // 保存用户语音消息（包含音频URL和转录文本）
             messageService.saveVoiceMessage(chatId, roleId, "user", userAudioUrl, transcribedText, null);
-
+            
+            // 阶段3：AI处理（不在SSE服务中保存消息，避免重复）
             aiResponse = processWithAI(chatId, roleId, transcribedText);
             logger.info("AI回复: " + aiResponse);
             
@@ -142,7 +76,7 @@ public class VoiceServiceImpl implements VoiceService {
             byte[] aiAudioBytes = textToSpeechWithModel(aiResponse);
             logger.info("AI语音合成完成，大小: " + aiAudioBytes.length + " bytes");
             
-            // 上传AI音频
+            // 阶段5：上传AI音频并保存AI消息
             try {
                 // 创建临时MultipartFile用于上传AI音频
                 String aiFileName = "ai_response_" + System.currentTimeMillis() + ".mp3";
