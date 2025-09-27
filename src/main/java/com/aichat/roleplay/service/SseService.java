@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class SseService {
@@ -35,6 +37,129 @@ public class SseService {
 
     public SseEmitter stream(Long chatId, Long roleId, String userMessage) {
         return streamWithReflection(chatId, roleId, userMessage, 0);
+    }
+
+    // 同步获取AI响应文本（用于语音服务）- 包含完整的prompt和反思逻辑
+    public String getAiResponseText(Long chatId, Long roleId, String userMessage) {
+        return getAiResponseText(chatId, roleId, userMessage, true);
+    }
+    
+    // 同步获取AI响应文本（用于语音服务）- 包含完整的prompt和反思逻辑，可控制是否保存消息
+    public String getAiResponseText(Long chatId, Long roleId, String userMessage, boolean saveMessages) {
+        log.info("同步获取AI响应文本 - chatId:{}, roleId:{}, saveMessages:{}", chatId, roleId, saveMessages);
+        
+        try {
+            CompletableFuture<String> responseFuture = new CompletableFuture<>();
+            processWithReflectionSync(chatId, roleId, userMessage, 0, responseFuture, saveMessages);
+            
+            // 等待响应完成，最多30秒（优化超时时间）
+            return responseFuture.get(30, TimeUnit.SECONDS);
+            
+        } catch (Exception e) {
+            log.error("同步获取AI响应失败", e);
+            throw new RuntimeException("获取AI响应失败: " + e.getMessage(), e);
+        }
+    }
+
+    // 同步处理带反思逻辑的AI响应
+    private void processWithReflectionSync(Long chatId, Long roleId, String originalUserMessage, int currentRetryCount, CompletableFuture<String> responseFuture) {
+        processWithReflectionSync(chatId, roleId, originalUserMessage, currentRetryCount, responseFuture, true);
+    }
+    
+    // 同步处理带反思逻辑的AI响应，可控制是否保存消息
+    private void processWithReflectionSync(Long chatId, Long roleId, String originalUserMessage, int currentRetryCount, CompletableFuture<String> responseFuture, boolean saveMessages) {
+        try {
+            String actualUserMessage = extractActualUserMessage(originalUserMessage);
+            List<Message> chatHistory = messageService.findByChatId(chatId);
+
+            // 只在第一次调用时保存用户消息，且saveMessages为true时
+            if (currentRetryCount == 0 && saveMessages) {
+                Message userMsg = Message.builder()
+                        .chatId(chatId).roleId(roleId)
+                        .senderType("user").content(actualUserMessage).build();
+                messageMapper.insert(userMsg);
+            }
+
+            Role role = roleMapper.findById(roleId);
+            if(role == null) {
+                responseFuture.completeExceptionally(new RuntimeException("角色不存在"));
+                return;
+            }
+
+            StringBuilder aiAnswer = new StringBuilder();
+            String optimizedPrompt = rolePromptEngineering.buildOptimizedPrompt(role, actualUserMessage, buildChatHistory(chatHistory));
+
+            aiChatService.generateStreamResponseDirect(optimizedPrompt, token -> {
+                try {
+                    if ("[DONE]".equals(token)) {
+                        String cleanedResponse = cleanAiResponse(aiAnswer.toString(), actualUserMessage);
+                        handleAiResponseCompleteSync(chatId, roleId, actualUserMessage, cleanedResponse, currentRetryCount, responseFuture, saveMessages);
+                    } else if (!"[ERROR]".equals(token)) {
+                        aiAnswer.append(token);
+                    } else {
+                        responseFuture.completeExceptionally(new RuntimeException("AI回复错误"));
+                    }
+                } catch (Exception e) {
+                    log.error("处理AI响应失败", e);
+                    responseFuture.completeExceptionally(e);
+                }
+            });
+
+        } catch (Exception e) {
+            log.error("同步处理失败", e);
+            responseFuture.completeExceptionally(e);
+        }
+    }
+
+    // 同步版本的反思分析处理
+    private void handleAiResponseCompleteSync(Long chatId, Long roleId, String originalQuery, String aiResponse, int retryCount, CompletableFuture<String> responseFuture) {
+        handleAiResponseCompleteSync(chatId, roleId, originalQuery, aiResponse, retryCount, responseFuture, true);
+    }
+    
+    // 同步版本的反思分析处理，可控制是否保存消息
+    private void handleAiResponseCompleteSync(Long chatId, Long roleId, String originalQuery, String aiResponse, int retryCount, CompletableFuture<String> responseFuture, boolean saveMessages) {
+        try {
+            ReflectionResult result = reflectionAgentService.reflect(originalQuery, aiResponse, chatId, roleId, retryCount);
+
+            if (result.needsRetry()) {
+                if (result.getRetryCount() >= 3) {
+                    log.warn("达到最大重试次数，返回当前响应");
+                    if (saveMessages) {
+                        saveAiMessage(chatId, roleId, aiResponse);
+                    }
+                    responseFuture.complete(aiResponse);
+                    return;
+                }
+                
+                Long userId = getCurrentUserId(chatId);
+                reflectionLogService.saveReflectionLog(chatId, roleId, userId, originalQuery, aiResponse, result, 0);
+                
+                log.info("反思建议重试，执行第{}次重试", result.getRetryCount());
+                // 递归调用进行重试
+                processWithReflectionSync(chatId, roleId, result.getRegeneratedQuery(), result.getRetryCount(), responseFuture, saveMessages);
+
+            } else if (result.isSuccess()) {
+                if (saveMessages) {
+                    saveAiMessage(chatId, roleId, aiResponse);
+                }
+                responseFuture.complete(aiResponse);
+            } else {
+                Long userId = getCurrentUserId(chatId);
+                reflectionLogService.saveReflectionLog(chatId, roleId, userId, originalQuery, aiResponse, result, 0);
+                if (saveMessages) {
+                    saveAiMessage(chatId, roleId, aiResponse);
+                }
+                log.warn("反思检测到问题但不重试: {}", result.getErrorMessage());
+                responseFuture.complete(aiResponse);
+            }
+        } catch (Exception e) {
+            log.error("同步反思处理异常", e);
+            // 即使反思失败，也返回AI响应
+            if (saveMessages) {
+                saveAiMessage(chatId, roleId, aiResponse);
+            }
+            responseFuture.complete(aiResponse);
+        }
     }
 
     // 主流式对话入口

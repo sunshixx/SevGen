@@ -92,5 +92,5 @@ reflection:
     max-response-length: 2000
     check-language-consistency: true
     check-role-consistency: true
-    anomaly-threshold: 0.2  # 降低阈值，让系统更敏感
+    anomaly-threshold: 0.4  # 降低阈值，让系统更敏感
     severe-anomaly-threshold: 0.7  # 降低严重阈值
