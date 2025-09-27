@@ -16,8 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 @Service
@@ -39,115 +37,23 @@ public class VoiceServiceImpl implements VoiceService {
     
     @Value("${langchain4j.open-ai.chat-model.base-url:https://openai.qiniu.com}")
     private String baseUrl;
-    
-    @Override
-    public byte[] processVoiceChat(MultipartFile audioFile) {
-        return processVoiceChat(audioFile, null);
-    }
-    
-    @Override
-    public byte[] processVoiceChat(MultipartFile audioFile, String originalFormat) {
-        try {
-            long startTime = System.currentTimeMillis();
-            logger.info("开始并行化语音对话处理，文件大小: " + audioFile.getSize() + " bytes");
-            
-            // 阶段1：并行上传和ASR处理
-            CompletableFuture<String> uploadFuture = CompletableFuture.supplyAsync(() -> {
-                try {
-                    long uploadStart = System.currentTimeMillis();
-                    String audioUrl = fileStorageService.uploadAudioFile(audioFile, audioFile.getOriginalFilename());
-                    long uploadTime = System.currentTimeMillis() - uploadStart;
-                    logger.info("文件上传完成，耗时: " + uploadTime + "ms, URL: " + audioUrl);
-                    return audioUrl;
-                } catch (Exception e) {
-                    logger.severe("文件上传失败: " + e.getMessage());
-                    throw new RuntimeException("文件上传失败", e);
-                }
-            });
-
-            // 阶段2：基于上传结果进行ASR处理
-            CompletableFuture<String> asrFuture = uploadFuture.thenCompose(audioUrl -> 
-                CompletableFuture.supplyAsync(() -> {
-                    try {
-                        long asrStart = System.currentTimeMillis();
-                        String transcribedText = speechToTextWithModel(audioUrl, audioFile.getOriginalFilename());
-                        long asrTime = System.currentTimeMillis() - asrStart;
-                        logger.info("ASR处理完成，耗时: " + asrTime + "ms, 结果: " + transcribedText);
-                        return transcribedText;
-                    } catch (Exception e) {
-                        logger.severe("ASR处理失败: " + e.getMessage());
-                        throw new RuntimeException("ASR处理失败", e);
-                    }
-                })
-            );
-
-            // 阶段3：基于ASR结果进行AI对话
-            CompletableFuture<String> aiFuture = asrFuture.thenCompose(transcribedText -> 
-                CompletableFuture.supplyAsync(() -> {
-                    try {
-                        long aiStart = System.currentTimeMillis();
-                        String aiResponse = processWithAI(transcribedText);
-                        long aiTime = System.currentTimeMillis() - aiStart;
-                        logger.info("AI处理完成，耗时: " + aiTime + "ms, 结果: " + aiResponse);
-                        return aiResponse;
-                    } catch (Exception e) {
-                        logger.severe("AI处理失败: " + e.getMessage());
-                        throw new RuntimeException("AI处理失败", e);
-                    }
-                })
-            );
-
-            // 阶段4：基于AI结果进行TTS
-            CompletableFuture<byte[]> ttsFuture = aiFuture.thenCompose(aiResponse -> 
-                CompletableFuture.supplyAsync(() -> {
-                    try {
-                        long ttsStart = System.currentTimeMillis();
-                        byte[] audioResponse = textToSpeechWithModel(aiResponse);
-                        long ttsTime = System.currentTimeMillis() - ttsStart;
-                        logger.info("TTS处理完成，耗时: " + ttsTime + "ms, 音频大小: " + audioResponse.length + " bytes");
-                        return audioResponse;
-                    } catch (Exception e) {
-                        logger.severe("TTS处理失败: " + e.getMessage());
-                        throw new RuntimeException("TTS处理失败", e);
-                    }
-                })
-            );
-
-            // 等待所有异步任务完成，设置超时时间
-            byte[] result = ttsFuture.get(30, TimeUnit.SECONDS);
-            
-            long totalTime = System.currentTimeMillis() - startTime;
-            logger.info("并行化语音对话处理完成，总耗时: " + totalTime + "ms");
-            
-            return result;
-            
-        } catch (Exception e) {
-            logger.severe("并行化语音对话处理失败: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("语音对话处理失败", e);
-        }
-    }
 
     @Override
     public byte[] processVoiceChat(MultipartFile audioFile, Long chatId, Long roleId) {
         try {
             long startTime = System.currentTimeMillis();
             logger.info("开始带消息记录的语音对话处理，聊天ID: " + chatId + ", 角色ID: " + roleId);
-            
-            // 声明变量用于保存中间结果
+
             String userAudioUrl = null;
             String transcribedText = null;
             String aiResponse = null;
             String aiAudioUrl = null;
-            
 
             userAudioUrl = fileStorageService.uploadAudioFile(audioFile, audioFile.getOriginalFilename());
             logger.info("用户音频上传完成，URL: " + userAudioUrl);
-            
 
             transcribedText = speechToTextWithModel(userAudioUrl, audioFile.getOriginalFilename());
             logger.info("语音转文字完成: " + transcribedText);
-            
 
             messageService.saveVoiceMessage(chatId, roleId, "user", userAudioUrl, transcribedText, null);
 
@@ -199,7 +105,7 @@ public class VoiceServiceImpl implements VoiceService {
             headers.set("Authorization", "Bearer " + apiKey);
             headers.setContentType(MediaType.APPLICATION_JSON);
             
-            // 从文件名提取格式
+
             String format = "mp3";
             //保留拓展性，方便以后接入更多格式
 //            if (filename != null) {
@@ -209,7 +115,7 @@ public class VoiceServiceImpl implements VoiceService {
 //                }
 //            }
             
-            // 构建请求体 - 按照七牛云ASR API文档格式
+
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", "asr");
             
@@ -271,8 +177,8 @@ public class VoiceServiceImpl implements VoiceService {
             requestBody.put("messages", List.of(message));
             
             // 优化：添加参数控制响应质量和速度的平衡
-            requestBody.put("max_tokens", 150); // 限制回复长度，加快响应
-            requestBody.put("temperature", 0.7); // 适中的创造性
+            requestBody.put("max_tokens", 150);
+            requestBody.put("temperature", 0.7);
             
             logger.info("发送AI请求，输入长度: " + inputText.length() + " 字符");
             
@@ -311,7 +217,6 @@ public class VoiceServiceImpl implements VoiceService {
 
     private byte[] textToSpeechWithModel(String text) {
         try {
-            // 正确的API路径：TTS接口路径
             String url = baseUrl + "/voice/tts";
             
             HttpHeaders headers = new HttpHeaders();
