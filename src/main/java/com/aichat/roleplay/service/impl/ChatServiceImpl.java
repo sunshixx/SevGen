@@ -17,8 +17,6 @@ import java.util.Optional;
 
 /**
  * 聊天会话服务实现类
- * 遵循SOLID原则中的单一职责原则和依赖倒置原则
- * 使用模板方法模式处理聊天会话的生命周期管理
  */
 @Service
 @Transactional
@@ -31,9 +29,6 @@ public class ChatServiceImpl implements IChatService {
 
     /**
      * 构造函数注入，遵循依赖倒置原则
-     *
-     * @param chatMapper 聊天会话数据访问接口
-     * @param roleMapper 角色数据访问接口
      */
     @Autowired
     public ChatServiceImpl(ChatMapper chatMapper, RoleMapper roleMapper) {
