@@ -92,6 +92,7 @@ public class AiChatServiceImpl implements IAiChatService {
 
     @Override
     public String generateRoleResponse(String rolePrompt, String userMessage, String chatHistory) {
+        // 该方法已不再使用，多角色聊天直接调用SseService
         return "";
     }
 
