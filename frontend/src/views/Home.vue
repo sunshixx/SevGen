@@ -534,6 +534,16 @@ const handleUserCommand = async (command: string) => {
   border-color: rgba(255, 0, 255, 0.8) !important;
 }
 
+.search-section {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.chatroom-btn {
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;

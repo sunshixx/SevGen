@@ -279,6 +279,7 @@ const formatTime = (timeStr?: string) => {
 <style scoped>
 .chatroom-container {
   min-height: 100vh;
+
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   position: relative;
   overflow: hidden;
@@ -339,12 +340,15 @@ const formatTime = (timeStr?: string) => {
   top: 0;
   z-index: 100;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
 }
 
 .header-content {
   max-width: 1200px;
   margin: 0 auto;
+
   height: 72px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -353,6 +357,7 @@ const formatTime = (timeStr?: string) => {
 .header-left {
   display: flex;
   align-items: center;
+
   gap: 20px;
 }
 
@@ -390,6 +395,7 @@ const formatTime = (timeStr?: string) => {
   padding: 40px 32px;
   position: relative;
   z-index: 1;
+
 }
 
 .content-wrapper {
@@ -398,6 +404,7 @@ const formatTime = (timeStr?: string) => {
 }
 
 .loading-section {
+
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
@@ -405,10 +412,7 @@ const formatTime = (timeStr?: string) => {
   padding: 40px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
-}
 
-.chatroom-list {
-  display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 32px;
 }
@@ -474,10 +478,12 @@ const formatTime = (timeStr?: string) => {
 
 .chatroom-card:hover::after {
   opacity: 1;
+
 }
 
 .card-header {
   display: flex;
+
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 20px;
@@ -500,27 +506,33 @@ const formatTime = (timeStr?: string) => {
   font-size: 16px;
   line-height: 1.6;
   margin: 0 0 24px 0;
+
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+
   position: relative;
   z-index: 2;
+
 }
 
 .card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   font-size: 14px;
   color: rgba(255, 255, 255, 0.7);
   position: relative;
   z-index: 2;
+
 }
 
 .participants {
   display: flex;
   align-items: center;
+
   gap: 8px;
   background: rgba(255, 255, 255, 0.2);
   padding: 6px 12px;
@@ -552,6 +564,7 @@ const formatTime = (timeStr?: string) => {
 @keyframes floatIcon {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-10px); }
+
 }
 
 .dialog-footer {
@@ -712,4 +725,5 @@ const formatTime = (timeStr?: string) => {
     transform: translateY(-6px);
   }
 }
+
 </style>

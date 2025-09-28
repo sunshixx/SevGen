@@ -147,6 +147,8 @@ public class ChatroomMessageServiceImpl implements IChatroomMessageService {
         log.info("获取聊天室最近消息，聊天室ID: {}, 限制数量: {}", chatRoomId, limit);
         List<ChatroomMessage> messages = chatroomMessageMapper.findRecentByChatRoomId(chatRoomId, limit);
 
+
+
         Collections.reverse(messages);
         return messages;
     }
@@ -186,6 +188,7 @@ public class ChatroomMessageServiceImpl implements IChatroomMessageService {
         }
 
         StringBuilder historyBuilder = new StringBuilder();
+
         int includedMessages = 0;
         
         for (ChatroomMessage message : recentMessages) {
@@ -205,6 +208,7 @@ public class ChatroomMessageServiceImpl implements IChatroomMessageService {
 
         String history = historyBuilder.toString().trim();
         log.debug("构建的角色聊天历史长度: {}, 包含消息数: {}", history.length(), includedMessages);
+
         return history;
     }
 }

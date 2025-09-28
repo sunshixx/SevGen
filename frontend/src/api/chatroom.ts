@@ -118,6 +118,7 @@ export const chatroomAPI = {
   // 从聊天室删除角色
   removeRoleFromChatroom(recordId: number): Promise<ApiResponse<void>> {
     return request.delete(`/chatrooms/${recordId}`)
+
   },
 
   // 创建聊天室协作流式连接
@@ -146,6 +147,7 @@ export const chatroomAPI = {
     console.log('创建聊天室协作SSE流式连接:', url)
     
     return new EventSource(url)
+
   }
 }
 

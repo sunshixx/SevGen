@@ -40,6 +40,7 @@
         </div>
         
         <div v-if="selectedRoles.length === 0" class="empty-roles">
+
           <div class="empty-state-container">
             <div class="empty-icon-wrapper">
               <div class="empty-icon-bg">
@@ -164,6 +165,7 @@
       </div>
 
       <!-- 聊天区域 -->
+
       <div class="chat-section">
         <div class="messages-container" ref="messagesContainer">
           <div v-if="messages.length === 0" class="empty-messages">
@@ -298,11 +300,13 @@
       </div>
     </div>
 
-    <!-- 角色选择器对话框 -->
+
+
     <el-dialog
       v-model="showRoleSelector"
       title="选择角色"
       width="800px"
+
       :before-close="handleClose"
     >
       <div class="role-selector-content">
@@ -328,9 +332,12 @@
           </el-button>
         </div>
       </div>
+
+
     </el-dialog>
   </div>
 </template>
+
 
 <script setup>
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
@@ -413,11 +420,13 @@ const loadChatroomRoles = async () => {
     } else {
       selectedRoles.value = []
     }
+
   } catch (error) {
     console.error('加载聊天室角色失败:', error)
     selectedRoles.value = []
   }
 }
+
 
 const loadChatroomMessages = async () => {
   try {
@@ -761,12 +770,14 @@ const renderMarkdown = (content) => {
   // 渲染markdown并清理HTML
   const rawHtml = marked(content)
   return DOMPurify.sanitize(rawHtml)
+
 }
 </script>
 
 <style scoped>
 .chatroom-detail-container {
   height: 100vh;
+
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   flex-direction: column;
@@ -786,11 +797,13 @@ const renderMarkdown = (content) => {
   align-items: center;
   max-width: 1200px;
   margin: 0 auto;
+
 }
 
 .header-left {
   display: flex;
   align-items: center;
+
   gap: 20px;
 }
 
@@ -803,38 +816,47 @@ const renderMarkdown = (content) => {
   color: #fff;
   font-size: 24px;
   font-weight: 600;
+
   margin: 0 0 4px 0;
 }
 
 .chatroom-info .description {
+
   color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
+
+
   margin: 0;
 }
 
 .main-content {
   flex: 1;
   display: flex;
+
   gap: 20px;
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+
   overflow: hidden;
 }
 
 .roles-section {
+
   width: 350px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 20px;
   padding: 20px;
+
   overflow-y: auto;
 }
 
 .section-header {
   display: flex;
+
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
@@ -844,19 +866,23 @@ const renderMarkdown = (content) => {
   color: #fff;
   font-size: 18px;
   font-weight: 600;
+
   margin: 0;
 }
 
 .role-count {
+
   color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
 }
 
 /* 空状态样式 */
 .empty-state-container {
+
   text-align: center;
   padding: 40px 20px;
 }
+
 
 .empty-icon-wrapper {
   position: relative;
@@ -1214,6 +1240,7 @@ const renderMarkdown = (content) => {
 .role-card:hover .avatar-halo {
   opacity: 0.8;
   transform: translate(-50%, -50%) scale(1.3);
+
 }
 
 .role-info {
@@ -1222,6 +1249,7 @@ const renderMarkdown = (content) => {
 }
 
 .role-name {
+
   font-size: 20px;
   font-weight: 700;
   color: #fff;
@@ -1428,15 +1456,18 @@ const renderMarkdown = (content) => {
 }
 
 /* 聊天区域样式 */
+
 .chat-section {
   flex: 1;
   display: flex;
   flex-direction: column;
+
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(15px);
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
   overflow: hidden;
 }
 
@@ -1444,6 +1475,7 @@ const renderMarkdown = (content) => {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+
   scroll-behavior: smooth;
 }
 
@@ -1508,10 +1540,12 @@ const renderMarkdown = (content) => {
 }
 
 .user-message .message-bubble {
+
   flex-direction: row-reverse;
 }
 
 .message-avatar {
+
   position: relative;
   flex-shrink: 0;
 }
@@ -1838,6 +1872,7 @@ const renderMarkdown = (content) => {
   padding: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.02);
+
 }
 
 .input-container {
@@ -1845,6 +1880,7 @@ const renderMarkdown = (content) => {
   flex-direction: column;
   gap: 12px;
 }
+
 
 .input-wrapper {
   display: flex;
@@ -2001,5 +2037,7 @@ const renderMarkdown = (content) => {
 .available-role-item .role-description {
   color: #666;
   font-size: 14px;
+
+
 }
 </style>

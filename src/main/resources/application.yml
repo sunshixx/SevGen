@@ -110,3 +110,4 @@ chatroom:
     role-selection-timeout: 100000
     # 流式响应超时时间（毫秒）
     stream-timeout: 600000
+
