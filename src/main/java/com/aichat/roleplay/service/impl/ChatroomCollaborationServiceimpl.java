@@ -9,6 +9,10 @@ import com.aichat.roleplay.service.IChatRoomService;
 import com.aichat.roleplay.service.IChatroomMessageService;
 import com.aichat.roleplay.service.IRoleSelector;
 import com.aichat.roleplay.service.SseService;
+import com.aichat.roleplay.service.IAiChatService;
+import com.aichat.roleplay.util.RolePromptEngineering;
+import com.aichat.roleplay.mapper.ChatroomMessageMapper;
+import com.aichat.roleplay.model.ChatroomMessage;
 import com.aichat.roleplay.context.UserContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +47,15 @@ public class ChatroomCollaborationServiceimpl implements ChatroomCollaborationSe
     @Autowired
     private IChatroomMessageService chatroomMessageService;
 
+    @Autowired
+    private RolePromptEngineering rolePromptEngineering;
+
+    @Autowired
+    private IAiChatService aiChatService;
+
+    @Autowired
+    private ChatroomMessageMapper chatroomMessageMapper;
+
     @Value("${chatroom.collaboration.top-k-roles:3}")
     private int topKRoles;
 
@@ -55,13 +68,42 @@ public class ChatroomCollaborationServiceimpl implements ChatroomCollaborationSe
     public SseEmitter handleCollaborativeMessage(Long chatRoomId, String userMessage, String context) {
         log.info("处理协作消息 - chatRoomId: {}, userMessage: {}", chatRoomId, userMessage);
 
-        SseEmitter emitter = new SseEmitter(60000L);
+        // 增加超时时间到5分钟，并添加超时和完成回调
+        SseEmitter emitter = new SseEmitter(300000L);
+        
+        // 设置超时回调
+        emitter.onTimeout(() -> {
+            log.warn("SSE连接超时 - chatRoomId: {}, 连接将被关闭", chatRoomId);
+            try {
+                emitter.complete();
+            } catch (Exception e) {
+                log.error("SSE超时完成失败", e);
+            }
+        });
+        
+        // 设置完成回调
+        emitter.onCompletion(() -> {
+            log.warn("SSE连接完成回调被触发 - chatRoomId: {}", chatRoomId);
+            // 打印堆栈跟踪以找出是谁调用了complete
+            Thread.dumpStack();
+        });
+        
+        // 设置错误回调
+        emitter.onError((throwable) -> {
+            log.error("SSE连接错误回调被触发 - chatRoomId: {}", chatRoomId, throwable);
+            // 打印堆栈跟踪以找出错误来源
+            Thread.dumpStack();
+        });
 
         try {
-            // 异步处理协作消息
+            // 在异步处理前获取当前用户ID
+            Long currentUserId = UserContext.getCurrentUserId();
+            log.info("当前用户ID: {}", currentUserId);
+            
+            // 异步处理协作消息，传递userId参数
             CompletableFuture.runAsync(() -> {
                 try {
-                    processCollaborativeMessage(chatRoomId, userMessage, context, emitter);
+                    processCollaborativeMessage(chatRoomId, userMessage, context, emitter, currentUserId);
                 } catch (Exception e) {
                     log.error("处理协作消息失败", e);
                     handleError(emitter, e);
@@ -79,10 +121,9 @@ public class ChatroomCollaborationServiceimpl implements ChatroomCollaborationSe
     /**
      * 处理协作消息的核心逻辑
      */
-    private void processCollaborativeMessage(Long chatRoomId, String userMessage, String context, SseEmitter emitter) {
+    private void processCollaborativeMessage(Long chatRoomId, String userMessage, String context, SseEmitter emitter, Long userId) {
         try {
             // 0. 保存用户消息
-            Long userId = UserContext.getCurrentUserId();
             if (userId != null) {
                 try {
                     chatroomMessageService.saveUserMessage(chatRoomId, userId, userMessage);
@@ -104,12 +145,13 @@ public class ChatroomCollaborationServiceimpl implements ChatroomCollaborationSe
             // 2. 选择合适的角色
             int actualTopK = Math.min(topKRoles, Math.min(availableRoles.size(), maxConcurrentRoles));
             
-            // 构建聊天历史上下文
-            String chatHistory = chatroomMessageService.buildChatHistory(chatRoomId, 10);
-            String fullContext = context + (chatHistory.isEmpty() ? "" : "\n聊天历史:\n" + chatHistory);
+            // 构建通用聊天历史用于角色选择（不包含角色特定信息）
+            String generalChatHistory = chatroomMessageService.buildChatHistory(chatRoomId, 10);
+            String selectionContext = (context != null && !context.trim().isEmpty() ? context : "") + 
+                                    (generalChatHistory.isEmpty() ? "" : "\n聊天历史:\n" + generalChatHistory);
             
             // 直接使用selectTopKRoles方法进行智能角色选择
-            var selectionResult = roleSelector.selectTopKRoles(userMessage, availableRoles, actualTopK, fullContext);
+            var selectionResult = roleSelector.selectTopKRoles(userMessage, availableRoles, actualTopK, selectionContext);
             List<Role> selectedRoles = availableRoles.stream()
                     .filter(role -> selectionResult.getSelectedRoleIds().contains(role.getId()))
                     .collect(Collectors.toList());
@@ -126,27 +168,37 @@ public class ChatroomCollaborationServiceimpl implements ChatroomCollaborationSe
             // 3. 发送开始消息
             sendMessage(emitter, "START", "开始协作对话", null, null);
 
-            // 4. 并发调用每个角色的流式响应
+            // 4. 为每个角色创建异步任务，使用CompletableFuture来跟踪流式响应的完成状态
             List<CompletableFuture<Void>> futures = new ArrayList<>();
 
             for (Role role : selectedRoles) {
-                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                CompletableFuture<Void> future = new CompletableFuture<>();
+                
+                // 异步处理角色响应
+                executorService.submit(() -> {
                     try {
-                        generateRoleStreamResponse(role, userMessage, chatHistory, chatRoomId, emitter);
+                        log.info("开始处理角色: {}", role.getName());
+                        // 为每个角色构建特定的聊天历史
+                        String roleChatHistory = chatroomMessageService.buildRoleChatHistory(chatRoomId, role.getId(), 10);
+                        String roleContext = (context != null && !context.trim().isEmpty() ? context : "") + 
+                                           (roleChatHistory.isEmpty() ? "" : "\n聊天历史:\n" + roleChatHistory);
+                        generateRoleStreamResponse(role, userMessage, roleContext, chatRoomId, emitter, future);
                     } catch (Exception e) {
                         log.error("角色 {} 流式响应失败", role.getName(), e);
                         sendMessage(emitter, "ERROR", "角色响应失败: " + e.getMessage(),
                                 role.getId(), role.getName());
+                        future.completeExceptionally(e);
                     }
-                }, executorService);
+                });
 
                 futures.add(future);
             }
 
-            // 5. 等待所有角色响应完成
+            // 5. 等待所有角色的流式响应真正完成
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                     .thenRun(() -> {
                         try {
+                            log.info("所有角色流式响应真正完成，准备关闭SSE连接 - chatRoomId: {}", chatRoomId);
                             sendMessage(emitter, "COMPLETE", "协作对话完成", null, null);
                             emitter.complete();
                         } catch (Exception e) {
@@ -169,7 +221,7 @@ public class ChatroomCollaborationServiceimpl implements ChatroomCollaborationSe
     /**
      * 生成单个角色的流式响应
      */
-    private void generateRoleStreamResponse(Role role, String userMessage, String chatHistory, Long chatRoomId, SseEmitter emitter) {
+    private void generateRoleStreamResponse(Role role, String userMessage, String roleContext, Long chatRoomId, SseEmitter emitter, CompletableFuture<Void> future) {
         try {
             log.info("开始生成角色 {} 的流式响应", role.getName());
 
@@ -177,47 +229,95 @@ public class ChatroomCollaborationServiceimpl implements ChatroomCollaborationSe
             sendMessage(emitter, "ROLE_START", "角色开始响应", role.getId(), role.getName());
 
             StringBuilder responseBuilder = new StringBuilder();
+            
+            // 使用RolePromptEngineering构建优化的prompt
+            String optimizedPrompt = rolePromptEngineering.buildOptimizedPrompt(role, userMessage, roleContext);
+            
+            log.debug("角色 {} 的完整prompt: {}", role.getName(), optimizedPrompt);
 
-            // 使用现有的generateRoleResponse方法，传入角色特定的聊天历史
-            String roleChatHistory = chatroomMessageService.buildRoleChatHistory(chatRoomId, role.getId(), 10);
-            String response = sseService.generateRoleResponse(role.getCharacterPrompt(), userMessage, roleChatHistory);
+            // 使用标志位跟踪响应状态
+            final boolean[] responseCompleted = {false};
 
-            // 模拟流式输出（将完整响应分块发送）
-            String[] words = response.split("(?<=\\s)|(?=\\s)");
-            for (String word : words) {
-                responseBuilder.append(word);
-                sendMessage(emitter, "ROLE_MESSAGE", word, role.getId(), role.getName());
-
-                // 添加小延迟模拟真实流式效果
+            // 直接调用AI服务生成流式响应
+            aiChatService.generateStreamResponseDirect(optimizedPrompt, token -> {
                 try {
-                    Thread.sleep(50);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
+                    // 添加详细的token调试日志
+                    log.info("角色 {} 收到token: '{}', 长度: {}, 类型: {}", 
+                            role.getName(), token, token != null ? token.length() : 0, 
+                            token != null ? token.getClass().getSimpleName() : "null");
+                    
+                    // 如果响应已完成或SSE连接已断开，跳过处理
+                    if (responseCompleted[0]) {
+                        log.info("角色 {} 跳过处理token，响应已完成: {}", role.getName(), responseCompleted[0]);
+                        return;
+                    }
 
-            // 保存AI消息到数据库
-            String fullResponse = responseBuilder.toString().trim();
-            if (!fullResponse.isEmpty()) {
-                try {
-                    chatroomMessageService.saveAiMessage(chatRoomId, role.getId(), fullResponse);
-                    log.info("AI消息已保存到聊天室 {}, 角色: {}", chatRoomId, role.getName());
+                    // 跳过空token，但不跳过有效的空格或换行符
+                    if (token == null || (token.isEmpty() && !token.equals(" ") && !token.equals("\n"))) {
+                        log.info("角色 {} 跳过空token: '{}'", role.getName(), token);
+                        return;
+                    }
+
+                    if ("[DONE]".equals(token)) {
+                        log.info("角色 {} 收到[DONE]信号", role.getName());
+                        // 标记响应完成
+                        responseCompleted[0] = true;
+                        
+                        String fullResponse = responseBuilder.toString().trim();
+                        log.info("角色 {} 响应生成完成，长度: {}", role.getName(), fullResponse.length());
+                        
+                        // 发送角色响应结束消息
+                        sendMessage(emitter, "ROLE_COMPLETE", "角色响应完成", role.getId(), role.getName());
+                        
+                        // 保存AI消息到数据库
+                        if (!fullResponse.isEmpty()) {
+                            saveAiMessage(chatRoomId, role.getId(), fullResponse);
+                        }
+                        
+                        // 完成CompletableFuture，表示该角色的流式响应真正完成
+                        future.complete(null);
+                        return;
+                        
+                    } else if ("[ERROR]".equals(token)) {
+                        log.info("角色 {} 收到[ERROR]信号", role.getName());
+                        responseCompleted[0] = true;
+                        log.error("角色 {} 响应生成出错", role.getName());
+                        sendMessage(emitter, "ROLE_ERROR", "角色响应出错", role.getId(), role.getName());
+                        // 完成CompletableFuture，即使出错也要标记完成
+                        future.completeExceptionally(new RuntimeException("角色响应生成出错"));
+                        
+                    } else {
+                        // 正常的响应token
+                        log.info("角色 {} 处理正常token: '{}', 进入else分支", role.getName(), token);
+                        responseBuilder.append(token);
+                        // 发送ROLE_MESSAGE
+                        log.info("角色 {} 发送ROLE_MESSAGE: '{}'", role.getName(), token);
+                        sendMessage(emitter, "ROLE_MESSAGE", token, role.getId(), role.getName());
+                    }
+                    
                 } catch (Exception e) {
-                    log.error("保存AI消息失败，角色: {}", role.getName(), e);
-                    // 不中断流程
+                    log.error("处理角色 {} 响应token失败", role.getName(), e);
+                    if (!responseCompleted[0]) {
+                        sendMessage(emitter, "ROLE_ERROR", "处理响应失败", role.getId(), role.getName());
+                        future.completeExceptionally(e);
+                    }
                 }
-            }
-
-            // 发送角色完成消息
-            sendMessage(emitter, "ROLE_COMPLETE", "角色响应完成", role.getId(), role.getName());
-
-            log.info("角色 {} 流式响应完成，响应长度: {}", role.getName(), responseBuilder.length());
+            });
 
         } catch (Exception e) {
             log.error("生成角色 {} 流式响应失败", role.getName(), e);
-            sendMessage(emitter, "ROLE_ERROR", "角色响应失败: " + e.getMessage(),
-                    role.getId(), role.getName());
+            sendMessage(emitter, "ROLE_ERROR", "生成响应失败: " + e.getMessage(), role.getId(), role.getName());
+            future.completeExceptionally(e);
+        }
+    }
+
+    // 辅助方法：保存AI消息到数据库
+    private void saveAiMessage(Long chatRoomId, Long roleId, String content) {
+        try {
+            chatroomMessageService.saveAiMessage(chatRoomId, roleId, content);
+            log.info("AI消息已保存到聊天室 {}, 角色ID: {}", chatRoomId, roleId);
+        } catch (Exception e) {
+            log.error("保存AI消息失败，角色ID: {}", roleId, e);
         }
     }
 
@@ -259,7 +359,7 @@ public class ChatroomCollaborationServiceimpl implements ChatroomCollaborationSe
     /**
      * 发送SSE消息
      */
-    private void sendMessage(SseEmitter emitter, String type, String message, Long roleId, String roleName) {
+    private synchronized void sendMessage(SseEmitter emitter, String type, String message, Long roleId, String roleName) {
         try {
             Map<String, Object> data = new HashMap<>();
             data.put("type", type);
@@ -274,14 +374,63 @@ public class ChatroomCollaborationServiceimpl implements ChatroomCollaborationSe
             }
 
             String jsonMessage = JSONUtil.toJsonStr(data);
+            
+            // 添加发送前的状态检查日志
+            log.debug("准备发送SSE消息: {}, emitter状态: {}", message, getEmitterState(emitter));
+            
             emitter.send(SseEmitter.event().data(jsonMessage));
+            log.debug("SSE消息发送成功: {}", message);
 
+        } catch (IllegalStateException e) {
+            // SSE连接已完成，静默处理
+            log.debug("SSE连接已完成，无法发送消息: {}", message);
+            // 添加堆栈跟踪以找出连接完成的原因
+            log.debug("SSE连接完成时的堆栈跟踪:", e);
         } catch (Exception e) {
             log.error("发送SSE消息失败", e);
-            emitter.completeWithError(e);
+            // 不要在这里调用completeWithError，避免过早关闭连接
+        }
+    }
+    
+    /**
+     * 获取SSE emitter状态的辅助方法
+     */
+    private String getEmitterState(SseEmitter emitter) {
+        try {
+            // 尝试多种方式获取emitter状态
+            Class<?> emitterClass = emitter.getClass();
+            
+            // 方法1：尝试获取complete字段
+            try {
+                java.lang.reflect.Field completeField = emitterClass.getDeclaredField("complete");
+                completeField.setAccessible(true);
+                boolean isComplete = (boolean) completeField.get(emitter);
+                return isComplete ? "COMPLETED" : "ACTIVE";
+            } catch (NoSuchFieldException e1) {
+                // 方法2：尝试从父类获取
+                try {
+                    java.lang.reflect.Field completeField = emitterClass.getSuperclass().getDeclaredField("complete");
+                    completeField.setAccessible(true);
+                    boolean isComplete = (boolean) completeField.get(emitter);
+                    return isComplete ? "COMPLETED" : "ACTIVE";
+                } catch (Exception e2) {
+                    // 方法3：尝试调用toString查看状态
+                    String toString = emitter.toString();
+                    if (toString.contains("complete")) {
+                        return "COMPLETED_FROM_STRING";
+                    }
+                    return "ACTIVE_FROM_STRING";
+                }
+            }
+        } catch (Exception e) {
+            log.debug("获取emitter状态失败: {}", e.getMessage());
+            return "ERROR: " + e.getMessage();
         }
     }
 
+    /**
+     * 检查SSE连接是否已完成
+     */
     /**
      * 处理错误
      */
