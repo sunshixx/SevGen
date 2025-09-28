@@ -121,7 +121,7 @@ git clone [repository-url]
 cd SevGen
 
 # 配置数据库
-# 1. 创建数据库: sevgen
+# 1. 创建数据库: qiniuyun
 # 2. 导入SQL文件: src/main/resources/sql/init_database.sql
 # 3. 修改配置: src/main/resources/application.yml
 
@@ -144,8 +144,8 @@ npm run dev
 
 ### 访问应用
 - **前端地址**: http://localhost:5173
-- **后端API**: http://localhost:8080
-- **API文档**: http://localhost:8080/swagger-ui.html
+- **后端API**: http://localhost:16999
+- **API文档**: http://localhost:16999/swagger-ui.html
 
 ---
 
