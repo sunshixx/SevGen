@@ -383,6 +383,7 @@ public class RagService {
     private String findTranslatedMatch(String roleName, Set<String> availableDirectories) {
         // 常见的中英文对照
         Map<String, String> nameTranslations = new HashMap<>();
+        // 历史人物和虚拟角色
         nameTranslations.put("哈利波特", "harry-potter");
         nameTranslations.put("哈利·波特", "harry-potter");
         nameTranslations.put("Harry Potter", "harry-potter");
@@ -392,6 +393,33 @@ public class RagService {
         nameTranslations.put("Einstein", "einstein");
         nameTranslations.put("阿尔伯特·爱因斯坦", "einstein");
         nameTranslations.put("Albert Einstein", "einstein");
+        nameTranslations.put("孔子", "confucius");
+        nameTranslations.put("Confucius", "confucius");
+        nameTranslations.put("佛陀", "buddha");
+        nameTranslations.put("Buddha", "buddha");
+        nameTranslations.put("释迦牟尼", "buddha");
+        nameTranslations.put("莎士比亚", "william-shakespeare");
+        nameTranslations.put("威廉·莎士比亚", "william-shakespeare");
+        nameTranslations.put("William Shakespeare", "william-shakespeare");
+        nameTranslations.put("达芬奇", "leonardo-da-vinci");
+        nameTranslations.put("列奥纳多·达·芬奇", "leonardo-da-vinci");
+        nameTranslations.put("Leonardo da Vinci", "leonardo-da-vinci");
+        nameTranslations.put("亚当斯密", "adam_smith");
+        nameTranslations.put("亚当·斯密", "adam_smith");
+        nameTranslations.put("Adam Smith", "adam_smith");
+        
+        // 职业角色
+        nameTranslations.put("产品经理", "product-manager");
+        nameTranslations.put("Product Manager", "product-manager");
+        nameTranslations.put("前端开发", "frontend-developer");
+        nameTranslations.put("前端工程师", "frontend-developer");
+        nameTranslations.put("Frontend Developer", "frontend-developer");
+        nameTranslations.put("后端开发", "backend-developer");
+        nameTranslations.put("后端工程师", "backend-developer");
+        nameTranslations.put("Backend Developer", "backend-developer");
+        nameTranslations.put("运维工程师", "devops-engineer");
+        nameTranslations.put("DevOps工程师", "devops-engineer");
+        nameTranslations.put("DevOps Engineer", "devops-engineer");
 
         String translated = nameTranslations.get(roleName);
         if (translated != null && availableDirectories.contains(translated)) {
