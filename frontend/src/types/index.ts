@@ -99,6 +99,34 @@ export interface SendMessageResponse {
   aiMessage: Message
 }
 
+// 聊天室相关类型
+export interface ChatRoom {
+  id: number
+  chatRoomId: string | number
+  name?: string
+  title?: string
+  description?: string
+  isActive: boolean
+  participantCount?: number
+  createTime?: string
+  updateTime?: string
+  userId?: number
+  roleId?: number
+  joinOrder?: number
+  deleted?: number
+}
+
+export interface CreateChatroomRequest {
+  title: string
+  description?: string
+}
+
+export interface CollaborativeMessageRequest {
+  chatRoomId: string
+  message: string
+  roleIds: number[]
+}
+
 // 路由参数类型
 export interface ChatParams {
   id: string

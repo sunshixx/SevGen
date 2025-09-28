@@ -104,8 +104,12 @@ request.interceptors.response.use(
       return data
     }
     
-    // 非标准格式，直接返回data
-    return data
+    // 非标准格式，包装成前端期望的格式
+    return {
+      success: true,
+      data: data,
+      message: 'success'
+    }
   },
   error => {
     console.error('响应拦截器错误:', error)

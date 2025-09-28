@@ -10,6 +10,7 @@
   "dependencies": {
     "@element-plus/icons-vue": "^2.1.0",
     "@types/highlight.js": "^10.1.0",
+    "@types/uuid": "^10.0.0",
     "axios": "^1.6.2",
     "dayjs": "^1.11.10",
     "dompurify": "^3.0.5",
@@ -17,6 +18,7 @@
     "highlight.js": "^11.11.1",
     "marked": "^10.0.0",
     "pinia": "^2.1.7",
+    "uuid": "^13.0.0",
     "vue": "^3.3.8",
     "vue-router": "^4.2.5"
   },

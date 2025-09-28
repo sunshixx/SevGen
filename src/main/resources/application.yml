@@ -98,3 +98,15 @@ reflection:
 rag:
   max-results: 5
   similarity-threshold: 0.7
+
+# 聊天室协作配置
+chatroom:
+  collaboration:
+    # 选择参与对话的角色数量
+    top-k-roles: 3
+    # 最大并发角色数量
+    max-concurrent-roles: 5
+    # 角色选择超时时间（毫秒）
+    role-selection-timeout: 10000
+    # 流式响应超时时间（毫秒）
+    stream-timeout: 60000
