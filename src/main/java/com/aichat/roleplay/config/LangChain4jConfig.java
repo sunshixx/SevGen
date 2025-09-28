@@ -1,6 +1,8 @@
 package com.aichat.roleplay.config;
 
+import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -21,10 +23,10 @@ public class LangChain4jConfig {
     @Value("${langchain4j.open-ai.chat-model.model-name:gpt-3.5-turbo}")
     private String chatModelName;
 
-    @Value("${langchain4j.open-ai.chat-model.temperature:0.7}")
+    @Value("${langchain4j.open-ai.chat-model.temperature:0.5}")
     private Double temperature;
 
-    @Value("${langchain4j.open-ai.chat-model.max-tokens:150}")
+    @Value("${langchain4j.open-ai.chat-model.max-tokens:4096}")
     private Integer maxTokens;
 
     @Value("${langchain4j.open-ai.speech-to-text-model.model-name:whisper-1}")
@@ -40,6 +42,18 @@ public class LangChain4jConfig {
     @Bean
     public StreamingChatLanguageModel streamingChatLanguageModel() {
         return OpenAiStreamingChatModel.builder()
+                .baseUrl(chatBaseUrl)
+                .apiKey(chatApiKey)
+                .modelName(chatModelName)
+                .temperature(temperature)
+                .maxTokens(maxTokens)
+                .timeout(Duration.ofSeconds(60))
+                .build();
+    }
+
+    @Bean
+    public ChatLanguageModel chatLanguageModel() {
+        return OpenAiChatModel.builder()
                 .baseUrl(chatBaseUrl)
                 .apiKey(chatApiKey)
                 .modelName(chatModelName)

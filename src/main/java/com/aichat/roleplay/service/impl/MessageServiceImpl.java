@@ -46,128 +46,6 @@ public class MessageServiceImpl implements IMessageService {
 
     }
 
-    @Override
-    public Message sendUserMessage(Long chatId, String content) {
-        log.info("发送用户消息，聊天ID: {}", chatId);
-
-        // 验证聊天会话是否存在
-        Chat chat = chatMapper.selectById(chatId);
-        if (chat == null) {
-            throw new RuntimeException("聊天会话不存在");
-        }
-
-        // 创建用户消息
-        Message userMessage = Message.builder()
-                .chatId(chatId)
-                .senderType("user")
-                .content(content)
-                .isRead(false)
-                .deleted(0)
-                .build();
-
-        // 保存用户消息
-        int result = messageMapper.insert(userMessage);
-        if (result > 0) {
-            log.info("用户消息保存成功，消息ID: {}", userMessage.getId());
-            return userMessage;
-        } else {
-            throw new RuntimeException("用户消息保存失败");
-        }
-    }
-
-    @Override
-    public Message generateAiResponse(Long chatId, String userMessage, Role role) {
-        log.info("生成AI回复，聊天ID: {}, 角色: {}", chatId, role.getName());
-
-        try {
-            // 获取聊天历史
-            List<Message> recentMessages = messageMapper.findByChatId(chatId);
-            StringBuilder chatHistory = new StringBuilder();
-
-            // 构建聊天历史（最近10条消息）
-            int startIndex = Math.max(0, recentMessages.size() - 10);
-            for (int i = startIndex; i < recentMessages.size() - 1; i++) { // 排除当前用户消息
-                Message msg = recentMessages.get(i);
-                chatHistory.append(msg.getSenderType()).append(": ").append(msg.getContent()).append("\n");
-            }
-
-            // 调用AI服务生成回复
-            String aiResponse = aiChatService.generateCharacterResponse(
-                    role.getName(),
-                    role.getCharacterPrompt(),
-                    userMessage
-            );
-
-            // 创建AI回复消息
-            Message responseMessage = Message.builder()
-                    .chatId(chatId)
-                    .senderType("ai")
-                    .content(aiResponse)
-                    .isRead(false)
-                    .deleted(0)
-                    .build();
-
-            // 保存AI回复消息
-            int result = messageMapper.insert(responseMessage);
-            if (result > 0) {
-                log.info("AI回复保存成功，消息ID: {}", responseMessage.getId());
-
-                // 通过SSE发送实时消息
-                Chat chat = chatMapper.selectById(chatId);
-                if (chat != null && chat.getUserId() != null) {
-                    //sseService.sendMessage(chat.getUserId().toString(), chatId, responseMessage);
-                }
-
-                return responseMessage;
-            } else {
-                throw new RuntimeException("AI回复保存失败");
-            }
-
-        } catch (Exception e) {
-            log.error("生成AI回复失败", e);
-            throw new RuntimeException("生成AI回复失败: " + e.getMessage());
-        }
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Message> getChatMessages(Long chatId) {
-        log.debug("获取聊天消息，聊天ID: {}", chatId);
-        return messageMapper.findByChatId(chatId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Message> getUnreadMessages(Long chatId) {
-        log.debug("获取未读消息，聊天ID: {}", chatId);
-        return messageMapper.findUnreadByChatId(chatId);
-    }
-
-    @Override
-    public void markMessagesAsRead(Long chatId) {
-        log.info("标记消息为已读，聊天ID: {}", chatId);
-        messageMapper.markAllAsReadByChatId(chatId);
-    }
-
-    @Override
-    public void markMessageAsRead(Long messageId) {
-        log.info("标记单条消息为已读，消息ID: {}", messageId);
-        messageMapper.markAsRead(messageId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Long countChatMessages(Long chatId) {
-        log.debug("统计聊天消息数量，聊天ID: {}", chatId);
-        return messageMapper.countByChatId(chatId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Message getLatestMessage(Long chatId) {
-        log.debug("获取最新消息，聊天ID: {}", chatId);
-        return messageMapper.findLatestByChatId(chatId);
-    }
 
     @Override
     public Message saveVoiceMessage(Long chatId, Long roleId, String senderType, String audioUrl, 
@@ -212,7 +90,7 @@ public class MessageServiceImpl implements IMessageService {
 
     @Override
     public List<Message> findByChatId(Long chatId) {
-
-        return messageMapper.findByChatIdPage(chatId, null, 20);
+        // 返回所有历史消息，用于构建完整的聊天上下文
+        return messageMapper.findByChatId(chatId);
     }
 }

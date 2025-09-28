@@ -279,22 +279,76 @@ const formatTime = (timeStr?: string) => {
 <style scoped>
 .chatroom-container {
   min-height: 100vh;
-  background: #f5f7fa;
+
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 动态粒子背景 */
+.chatroom-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+  animation: particleFloat 20s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes particleFloat {
+  0%, 100% { 
+    transform: translateY(0px) rotate(0deg);
+    opacity: 1;
+  }
+  50% { 
+    transform: translateY(-20px) rotate(180deg);
+    opacity: 0.8;
+  }
+}
+
+/* 光影动画 */
+.chatroom-container::after {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: lightRotate 30s linear infinite;
+  z-index: -1;
+}
+
+@keyframes lightRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .header {
-  background: white;
-  border-bottom: 1px solid #e4e7ed;
-  padding: 0 24px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0 32px;
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
 }
 
 .header-content {
   max-width: 1200px;
   margin: 0 auto;
-  height: 64px;
+
+  height: 72px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -303,27 +357,45 @@ const formatTime = (timeStr?: string) => {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+
+  gap: 20px;
 }
 
 .back-btn {
-  color: #606266;
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .back-btn:hover {
-  color: #409eff;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #303133;
+  font-size: 32px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.8) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin: 0;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .main-content {
-  padding: 24px;
+  padding: 40px 32px;
+  position: relative;
+  z-index: 1;
+
 }
 
 .content-wrapper {
@@ -332,81 +404,167 @@ const formatTime = (timeStr?: string) => {
 }
 
 .loading-section {
-  background: white;
-  border-radius: 8px;
-  padding: 24px;
-}
 
-.chatroom-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-radius: 24px;
+  padding: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
+
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 32px;
 }
 
 .chatroom-card {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  border: 1px solid #e4e7ed;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-radius: 24px;
+  padding: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
 }
 
+/* 卡片悬浮和倾斜效果 */
 .chatroom-card:hover {
-  border-color: #409eff;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
-  transform: translateY(-2px);
+  transform: translateY(-12px) rotateX(5deg) rotateY(5deg);
+  box-shadow: 
+    0 25px 60px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* 卡片内部光效 */
+.chatroom-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s ease;
+}
+
+.chatroom-card:hover::before {
+  left: 100%;
+}
+
+/* 卡片边框光效 */
+.chatroom-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 24px;
+  padding: 2px;
+  background: linear-gradient(45deg, 
+    rgba(255, 255, 255, 0.3), 
+    transparent, 
+    rgba(255, 255, 255, 0.3));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.chatroom-card:hover::after {
+  opacity: 1;
+
 }
 
 .card-header {
   display: flex;
-  align-items: center;
+
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
 }
 
 .chatroom-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
   margin: 0;
+  line-height: 1.3;
+  letter-spacing: -0.3px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .chatroom-description {
-  color: #606266;
-  font-size: 14px;
-  line-height: 1.5;
-  margin: 0 0 16px 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0 0 24px 0;
+
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+
+  position: relative;
+  z-index: 2;
+
 }
 
 .card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
-  color: #909399;
+
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  position: relative;
+  z-index: 2;
+
 }
 
 .participants {
   display: flex;
   align-items: center;
-  gap: 4px;
+
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 6px 12px;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .empty-section {
-  background: white;
-  border-radius: 8px;
-  padding: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-radius: 32px;
+  padding: 80px 40px;
   text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.1);
 }
 
 .empty-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
+  font-size: 80px;
+  margin-bottom: 32px;
+  opacity: 0.8;
+  animation: floatIcon 3s ease-in-out infinite;
+}
+
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+
 }
 
 .dialog-footer {
@@ -414,4 +572,158 @@ const formatTime = (timeStr?: string) => {
   justify-content: flex-end;
   gap: 12px;
 }
+
+/* Element Plus 组件样式覆盖 */
+:deep(.el-button--primary) {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  font-weight: 600;
+  padding: 14px 24px;
+  font-size: 15px;
+  color: #fff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+:deep(.el-button--primary:hover) {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.2) 100%);
+}
+
+:deep(.el-tag) {
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 12px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+:deep(.el-tag--success) {
+  background: rgba(52, 199, 89, 0.3);
+  color: #fff;
+  border: 1px solid rgba(52, 199, 89, 0.5);
+  box-shadow: 0 4px 15px rgba(52, 199, 89, 0.2);
+}
+
+:deep(.el-tag--info) {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+:deep(.el-dialog) {
+  border-radius: 24px;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+}
+
+:deep(.el-dialog__header) {
+  padding: 32px 32px 0;
+}
+
+:deep(.el-dialog__title) {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+:deep(.el-input__wrapper) {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.el-input__inner) {
+  color: #fff;
+}
+
+:deep(.el-input__inner::placeholder) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+:deep(.el-textarea__inner) {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.el-textarea__inner::placeholder) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 20px;
+  }
+  
+  .header-content {
+    height: 64px;
+  }
+  
+  .title {
+    font-size: 24px;
+  }
+  
+  .main-content {
+    padding: 24px 20px;
+  }
+  
+  .chatroom-list {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .chatroom-card {
+    padding: 24px;
+  }
+  
+  .chatroom-card:hover {
+    transform: translateY(-8px) rotateX(2deg) rotateY(2deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .header-left {
+    gap: 12px;
+  }
+  
+  .title {
+    font-size: 20px;
+  }
+  
+  .chatroom-card {
+    padding: 20px;
+  }
+  
+  .chatroom-name {
+    font-size: 18px;
+  }
+  
+  .chatroom-card:hover {
+    transform: translateY(-6px);
+  }
+}
+
 </style>

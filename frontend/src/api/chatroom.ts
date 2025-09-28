@@ -118,6 +118,36 @@ export const chatroomAPI = {
   // 从聊天室删除角色
   removeRoleFromChatroom(recordId: number): Promise<ApiResponse<void>> {
     return request.delete(`/chatrooms/${recordId}`)
+
+  },
+
+  // 创建聊天室协作流式连接
+  createCollaborativeStreamConnection(chatRoomId: string | number, userMessage: string, roleIds?: number[]): EventSource {
+    const token = localStorage.getItem('token')
+    
+    // 在开发环境中，EventSource不能直接使用Vite代理，所以需要完整URL
+    const baseURL = import.meta.env.DEV ? 'http://localhost:16999' : ''
+    
+    // 构建查询参数
+    const params = new URLSearchParams({
+      chatRoomId: chatRoomId.toString(),
+      userMessage: userMessage
+    })
+    
+    // 添加角色ID参数
+    if (roleIds && roleIds.length > 0) {
+      params.append('roleIds', roleIds.join(','))
+    }
+    
+    if (token) {
+      params.append('token', token)
+    }
+    
+    const url = `${baseURL}/api/sse/collaborate?${params.toString()}`
+    console.log('创建聊天室协作SSE流式连接:', url)
+    
+    return new EventSource(url)
+
   }
 }
 

@@ -9,9 +9,14 @@
         @click="switchToActiveChat(chat.id)"
       >
         <div class="side-card-header">
-          <div class="ai-avatar" :style="{ backgroundColor: getRoleColor(chat.roleId) }">
+          <el-avatar 
+            :size="40" 
+            :src="getRoleAvatar(chat.roleId)"
+            :style="{ backgroundColor: getRoleAvatar(chat.roleId) ? 'transparent' : getRoleColor(chat.roleId) }"
+            @error="handleAvatarError"
+          >
             <span>{{ getRoleName(chat.roleId)[0] || 'A' }}</span>
-          </div>
+          </el-avatar>
           <button 
             class="delete-chat-btn"
             @click.stop="deleteChat(chat.id)"
@@ -36,10 +41,14 @@
         :key="activeChat.id"
       >
         <div class="active-card-header">
-          <div class="ai-avatar large" :style="{ backgroundColor: getRoleColor(activeChat.roleId) }">
+          <el-avatar 
+            :size="60" 
+            :src="getRoleAvatar(activeChat.roleId)"
+            :style="{ backgroundColor: getRoleAvatar(activeChat.roleId) ? 'transparent' : getRoleColor(activeChat.roleId) }"
+            @error="handleAvatarError"
+          >
             <span>{{ getRoleName(activeChat.roleId)[0] || 'A' }}</span>
-
-          </div>
+          </el-avatar>
           <div class="chat-info">
             <div class="chat-title">{{ getRoleName(activeChat.roleId) }}</div>
             <div v-if="getSafeRoleDescription(activeChat.roleId)" class="chat-description">{{ getSafeRoleDescription(activeChat.roleId) }}</div>
@@ -68,14 +77,28 @@
               :class="{ 'user': message.senderType === 'user', 'ai': message.senderType === 'ai' }"
             >
               <div class="message-avatar">
-                <span v-if="message.senderType === 'user'">你</span>
-                <span v-else>{{ getRoleName(activeChat.roleId)[0] }}</span>
+                <el-avatar 
+                  v-if="message.senderType === 'user'"
+                  :size="32"
+                  style="background-color: #409EFF;"
+                >
+                  <span>你</span>
+                </el-avatar>
+                <el-avatar 
+                  v-else
+                  :size="32" 
+                  :src="getRoleAvatar(activeChat.roleId)"
+                  :style="{ backgroundColor: getRoleAvatar(activeChat.roleId) ? 'transparent' : getRoleColor(activeChat.roleId) }"
+                  @error="handleAvatarError"
+                >
+                  <span>{{ getRoleName(activeChat.roleId)[0] }}</span>
+                </el-avatar>
               </div>
               
               <!-- 文本消息 - 为AI消息添加Markdown渲染 -->
               <div v-if="message.messageType === 'text' || !message.messageType" class="message-content text-message">
                 <template v-if="message.senderType === 'ai'">
-                  <div v-html="renderMarkdown(message.content)"></div>
+                  <div v-html="renderMarkdownLocal(message.content)"></div>
                 </template>
                 <template v-else>
                   {{ message.content }}
@@ -202,9 +225,14 @@
         @click="switchToActiveChat(chat.id)"
       >
         <div class="side-card-header">
-          <div class="ai-avatar" :style="{ backgroundColor: getRoleColor(chat.roleId) }">
+          <el-avatar 
+            :size="40" 
+            :src="getRoleAvatar(chat.roleId)"
+            :style="{ backgroundColor: getRoleAvatar(chat.roleId) ? 'transparent' : getRoleColor(chat.roleId) }"
+            @error="handleAvatarError"
+          >
             <span>{{ getRoleName(chat.roleId)[0] || 'A' }}</span>
-          </div>
+          </el-avatar>
           <button 
             class="delete-chat-btn"
             @click.stop="deleteChat(chat.id)"
@@ -231,7 +259,8 @@ import { chatAPI, messageAPI, roleAPI } from '@/api'
 import { SSEConnection } from '@/api/message'
 import type { Chat, Message, Role } from '@/types'
 import { formatRelativeTime, formatMessageTime, shouldShowTimeLabel } from '@/utils/dateUtils'
-import { renderMarkdownWithHighlight as renderMarkdown } from '@/utils/markdownWithHighlight'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 const route = useRoute()
 const router = useRouter()
@@ -250,6 +279,21 @@ const messagesContainer = ref<HTMLElement | null>(null)
 // 语音输入状态
 const isRecording = ref(false)
 const mediaRecorder = ref<MediaRecorder | null>(null)
+
+// Markdown渲染函数
+const renderMarkdownLocal = (content: string) => {
+  if (!content) return ''
+  
+  // 配置marked选项
+  marked.setOptions({
+    breaks: true, // 支持换行
+    gfm: true,    // 支持GitHub风格的Markdown
+  })
+  
+  // 渲染markdown并清理HTML
+  const rawHtml = marked(content)
+  return DOMPurify.sanitize(rawHtml)
+}
 const audioChunks = ref<Blob[]>([])
 
 // 语音播放状态
@@ -692,6 +736,24 @@ const getRoleName = (roleId: number): string => {
   return name.trim()
 }
 
+// 获取角色头像
+const getRoleAvatar = (roleId: number): string => {
+  const role = rolesCache.value.get(roleId)
+  if (!role || !role.avatar) {
+    return '' // 如果没有头像，返回空字符串，让el-avatar显示文字
+  }
+  return role.avatar
+}
+
+// 头像加载错误处理
+const handleAvatarError = (event: Event) => {
+  const target = event.target as HTMLImageElement
+  if (target) {
+    console.log('头像加载失败:', target.src)
+    target.src = '' // 清空src，让el-avatar显示文字
+  }
+}
+
 // 安全获取角色描述，绝对不显示undefined
 const getSafeRoleDescription = (roleId: number): string => {
   try {
@@ -823,19 +885,24 @@ const sendMessageToChat = async (chatId: number, content: string) => {
       // 监听SSE事件
       eventSource.onmessage = (event) => {
         try {
-          // 支持多行 data，逐行处理
-          const lines = event.data.split('\n')
-          for (const line of lines) {
-            const data = line.trim()
-            if (!data) continue
-            console.log('收到SSE数据:', data)
-            let token = data
-            // 兼容 "data: " 前缀
-            if (token.startsWith('data: ')) {
-              token = token.substring(6)
-            }
-            // 处理特殊 token
-            if (token === '[DONE]') {
+          console.log('🔥 [版本4.0] 收到原始SSE数据:', event.data)
+          
+          // 手动移除"data: "前缀（如果存在）
+          let token = event.data.trim()
+          if (token.startsWith('data: ')) {
+            token = token.substring(6) // 移除"data: "前缀
+          }
+          
+          // 如果数据为空，跳过
+          if (!token) {
+            console.log('🔥 跳过空数据')
+            return
+          }
+          
+          console.log('🔥 [版本4.0] 处理token:', token)
+          
+          // 处理特殊 token
+          if (token === '[DONE]') {
               // 在刷新数据库消息前，先将流式累积内容保存为一条AI消息
               if (aiResponse.trim()) {
                 const finalAiMessage: Message = {
@@ -865,29 +932,35 @@ const sendMessageToChat = async (chatId: number, content: string) => {
             } else if (token.startsWith('[ERROR] ')) {
               ElMessage.error(token.replace('[ERROR] ', ''))
             } else {
-              aiResponse += token
-              if (!tempAiMessage) {
-                tempAiMessage = {
-                  id: Date.now() + 1,
-                  chatId: chatId,
-                  content: aiResponse,
-                  senderType: 'ai',
-                  sentAt: new Date().toISOString(),
-                  isRead: false
+              // 正常的AI回复内容 - 只有在token不为空且不是特殊标记时才累积
+              if (token && token.trim()) {
+                console.log('🔥 累积token到aiResponse:', token)
+                aiResponse += token
+                
+                if (!tempAiMessage) {
+                  tempAiMessage = {
+                    id: Date.now() + 1,
+                    chatId: chatId,
+                    content: aiResponse,
+                    senderType: 'ai',
+                    sentAt: new Date().toISOString(),
+                    isRead: false
+                  }
+                  const currentMessages = allMessages.value.get(chatId) || []
+                  allMessages.value.set(chatId, [...currentMessages, tempAiMessage])
+                } else {
+                  tempAiMessage.content = aiResponse
+                  const currentMessages = allMessages.value.get(chatId) || []
+                  const updatedMessages = currentMessages.map(msg => 
+                    msg.id === tempAiMessage!.id ? { ...tempAiMessage! } : msg
+                  )
+                  allMessages.value.set(chatId, updatedMessages)
                 }
-                const currentMessages = allMessages.value.get(chatId) || []
-                allMessages.value.set(chatId, [...currentMessages, tempAiMessage])
+                scrollToBottom()
               } else {
-                tempAiMessage.content = aiResponse
-                const currentMessages = allMessages.value.get(chatId) || []
-                const updatedMessages = currentMessages.map(msg => 
-                  msg.id === tempAiMessage!.id ? { ...tempAiMessage! } : msg
-                )
-                allMessages.value.set(chatId, updatedMessages)
+                console.log('🔥 跳过空token或无效数据:', token)
               }
-              scrollToBottom()
             }
-          }
         } catch (error) {
           console.error('处理SSE消息失败:', error, event.data)
           reject(error)
