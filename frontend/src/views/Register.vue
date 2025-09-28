@@ -2,8 +2,8 @@
   <div class="register-container">
     <div class="register-card">
       <div class="logo-section">
-        <img src="/robot-logo.svg" alt="Agent广场" class="logo-image">
-        <h1 class="app-title">Agent广场</h1>
+        <img src="/robot-logo.svg" alt="SevGen" class="logo-image">
+      <h1 class="app-title">SevGen</h1>
         <p class="app-subtitle">创建账户，开始AI角色扮演之旅</p>
       </div>
       

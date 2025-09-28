@@ -7,13 +7,20 @@ import com.aichat.roleplay.service.IUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -27,6 +34,14 @@ public class UserServiceImpl implements IUserService {
     
     // 验证码有效期（分钟）
     private static final int CODE_EXPIRY_MINUTES = 5;
+    
+    // 头像上传目录
+    @Value("${app.upload.avatar-dir:frontend/public/avatars}")
+    private String avatarUploadDir;
+    
+    // 头像访问URL前缀
+    @Value("${app.upload.avatar-url-prefix:http://localhost:5173/avatars}")
+    private String avatarUrlPrefix;
     
     // 内存中存储验证码信息（实际项目中可使用Redis等缓存）
     private final Map<String, VerificationCodeInfo> codeStorage = new ConcurrentHashMap<>();
@@ -305,10 +320,86 @@ public class UserServiceImpl implements IUserService {
 
             log.info("用户登录认证成功，用户名: {}", username);
             return Optional.of(user);
-            
+
         } catch (Exception e) {
             log.error("用户登录认证异常", e);
             return Optional.empty();
+        }
+    }
+
+    @Override
+    public String updateUserAvatar(Long userId, MultipartFile file) {
+        log.info("更新用户头像，用户ID: {}", userId);
+
+        try {
+            // 创建上传目录
+            Path uploadPath = Paths.get(avatarUploadDir);
+            log.info("头像上传目录: {}", uploadPath.toAbsolutePath());
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+                log.info("创建头像上传目录: {}", uploadPath.toAbsolutePath());
+            }
+
+            // 生成唯一文件名
+            String originalFilename = file.getOriginalFilename();
+            String fileExtension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String fileName = UUID.randomUUID().toString() + fileExtension;
+
+            // 保存文件
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath);
+            log.info("头像文件保存成功: {}", filePath.toAbsolutePath());
+
+            // 构建头像URL
+            String avatarUrl = avatarUrlPrefix + "/" + fileName;
+
+            // 更新用户头像字段
+            User user = userMapper.selectById(userId);
+            if (user == null) {
+                throw new RuntimeException("用户不存在");
+            }
+
+            // 删除旧头像文件（如果存在）
+            if (user.getAvatar() != null && !user.getAvatar().isEmpty()) {
+                deleteOldAvatar(user.getAvatar());
+            }
+
+            // 使用专门的方法只更新avatar字段
+            int result = userMapper.updateUserAvatar(userId, avatarUrl);
+            if (result <= 0) {
+                throw new RuntimeException("更新用户头像失败");
+            }
+
+            log.info("用户头像更新成功，用户ID: {}, 头像URL: {}", userId, avatarUrl);
+            return avatarUrl;
+
+        } catch (IOException e) {
+            log.error("头像文件保存失败", e);
+            throw new RuntimeException("头像文件保存失败: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("更新用户头像异常", e);
+            throw new RuntimeException("更新用户头像失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 删除旧头像文件
+     */
+    private void deleteOldAvatar(String avatarUrl) {
+        try {
+            if (avatarUrl.startsWith(avatarUrlPrefix)) {
+                String fileName = avatarUrl.substring(avatarUrlPrefix.length() + 1);
+                Path oldFilePath = Paths.get(avatarUploadDir, fileName);
+                if (Files.exists(oldFilePath)) {
+                    Files.delete(oldFilePath);
+                    log.info("删除旧头像文件: {}", oldFilePath.toAbsolutePath());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("删除旧头像文件失败: {}", e.getMessage());
         }
     }
 }

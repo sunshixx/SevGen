@@ -51,4 +51,14 @@ public interface UserMapper extends BaseMapper<User> {
      */
     @Select("SELECT COUNT(*) > 0 FROM users WHERE email = #{email} AND deleted = 0")
     boolean existsByEmail(@Param("email") String email);
+
+    /**
+     * 更新用户头像
+     *
+     * @param userId 用户ID
+     * @param avatarUrl 头像URL
+     * @return 更新影响的行数
+     */
+    @org.apache.ibatis.annotations.Update("UPDATE users SET avatar = #{avatarUrl}, updated_at = CURRENT_TIMESTAMP WHERE id = #{userId} AND deleted = 0")
+    int updateUserAvatar(@Param("userId") Long userId, @Param("avatarUrl") String avatarUrl);
 }

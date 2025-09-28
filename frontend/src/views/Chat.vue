@@ -80,9 +80,10 @@
                 <el-avatar 
                   v-if="message.senderType === 'user'"
                   :size="32"
-                  style="background-color: #409EFF;"
+                  :src="authStore.userInfo?.avatar"
+                  :style="{ backgroundColor: authStore.userInfo?.avatar ? 'transparent' : '#409EFF' }"
                 >
-                  <span>你</span>
+                  <span>{{ authStore.userInfo?.username?.charAt(0)?.toUpperCase() || '你' }}</span>
                 </el-avatar>
                 <el-avatar 
                   v-else
@@ -261,9 +262,11 @@ import type { Chat, Message, Role } from '@/types'
 import { formatRelativeTime, formatMessageTime, shouldShowTimeLabel } from '@/utils/dateUtils'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { useAuthStore } from '@/stores'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 
 // 响应式数据
 const activeChatId = ref<number>(Number(route.params.id))
@@ -402,9 +405,29 @@ const processVoiceInput = async (audioBlob: Blob) => {
     ElMessage.error('找不到当前对话')
     return
   }
-  
+
   try {
     console.log('发送语音到后端处理...')
+    
+    // 立即显示用户语音消息（临时消息，避免用户看不到自己发的内容）
+    const tempUserMessage: Message = {
+      id: Date.now(), // 临时ID
+      chatId: activeChatId.value,
+      content: '🎤 语音消息', // 临时显示文本
+      messageType: 'voice',
+      senderType: 'user',
+      sentAt: new Date().toISOString(),
+      isRead: false,
+      audioUrl: URL.createObjectURL(audioBlob), // 临时音频URL用于播放
+      audioDuration: 0 // 临时时长，后续会更新
+    }
+    
+    // 立即添加到消息列表中显示
+    const currentMessages = allMessages.value.get(activeChatId.value) || []
+    allMessages.value.set(activeChatId.value, [...currentMessages, tempUserMessage])
+    
+    // 自动滚动到底部，让用户看到刚发送的消息
+    scrollToBottom()
     
     // 创建FormData
     const formData = new FormData()
@@ -470,8 +493,28 @@ const processVoiceInput = async (audioBlob: Blob) => {
       await audio.play()
       console.log('AI语音回复播放完成')
       
-      // 刷新消息列表以显示新的对话内容
-      await loadMessages(activeChatId.value)
+      // 添加AI语音回复消息到消息列表中显示
+      const aiVoiceMessage: Message = {
+        id: Date.now() + 1, // 确保ID唯一
+        chatId: activeChatId.value,
+        content: '🤖 AI语音回复', // AI语音消息显示文本
+        messageType: 'voice',
+        senderType: 'ai',
+        sentAt: new Date().toISOString(),
+        isRead: false,
+        audioUrl: audioUrl, // AI回复的音频URL
+        audioDuration: 0 // 临时时长，后续会更新
+      }
+      
+      // 添加AI回复消息到消息列表
+      const currentMessages = allMessages.value.get(activeChatId.value) || []
+      allMessages.value.set(activeChatId.value, [...currentMessages, aiVoiceMessage])
+      
+      // 自动滚动到底部
+      scrollToBottom()
+      
+      // 移除 loadMessages 调用，避免语音消息同步显示问题
+      // await loadMessages(activeChatId.value)
       
     } else {
       console.error('语音处理失败:', response.status)
@@ -917,7 +960,7 @@ const sendMessageToChat = async (chatId: number, content: string) => {
                 allMessages.value.set(chatId, [...currentMessages, finalAiMessage])
                 scrollToBottom()
               }
-              loadMessages(chatId)
+              // 移除 loadMessages(chatId) 调用，避免重新加载导致消息同步出现
               eventSource.close()
               isAiReplying.value = false
               ElMessage.success('消息发送成功')
@@ -1787,8 +1830,23 @@ watch(activeChatId, (newChatId) => {
 .text-message :deep(h6) {
   color: white;
   font-weight: 600;
-  margin-top: 8px;
-  margin-bottom: 4px;
+  margin: 0;
+}
+
+/* 标题紧贴列表 */
+.text-message :deep(h1 + ul),
+.text-message :deep(h2 + ul),
+.text-message :deep(h3 + ul),
+.text-message :deep(h4 + ul),
+.text-message :deep(h5 + ul),
+.text-message :deep(h6 + ul),
+.text-message :deep(h1 + ol),
+.text-message :deep(h2 + ol),
+.text-message :deep(h3 + ol),
+.text-message :deep(h4 + ol),
+.text-message :deep(h5 + ol),
+.text-message :deep(h6 + ol) {
+  margin-top: 0;
 }
 
 .text-message :deep(h1) {
@@ -1804,18 +1862,19 @@ watch(activeChatId, (newChatId) => {
 }
 
 .text-message :deep(p) {
-  margin: 4px 0;
-  line-height: 1.6;
+  margin: 0;
+  line-height: 1.4;
 }
 
 .text-message :deep(ul),
 .text-message :deep(ol) {
-  margin: 4px 0 4px 16px;
-  padding-left: 16px;
+  margin: 0;
+  padding-left: 1em;
 }
 
 .text-message :deep(li) {
-  margin: 2px 0;
+  margin: 0;
+  line-height: 1.4;
 }
 
 .text-message :deep(strong),
@@ -1837,10 +1896,10 @@ watch(activeChatId, (newChatId) => {
 
 .text-message :deep(pre) {
   background: rgba(0, 0, 0, 0.2);
-  padding: 10px;
-  border-radius: 8px;
+  padding: 0.3em;
+  border-radius: 4px;
   overflow-x: auto;
-  margin: 8px 0;
+  margin: 0;
 }
 
 .text-message :deep(pre code) {
@@ -1855,8 +1914,8 @@ watch(activeChatId, (newChatId) => {
 
 .text-message :deep(blockquote) {
   border-left: 3px solid #a78bfa;
-  padding-left: 12px;
-  margin: 8px 0;
+  padding-left: 0.5em;
+  margin: 0;
   opacity: 0.9;
 }
 

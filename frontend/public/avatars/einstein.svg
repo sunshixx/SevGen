@@ -1,0 +1,37 @@
+<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆 -->
+  <circle cx="40" cy="40" r="40" fill="#e6f3ff"/>
+  
+  <!-- 头部 -->
+  <circle cx="40" cy="35" r="18" fill="#fdbcb4"/>
+  
+  <!-- 小胡子 -->
+  <ellipse cx="40" cy="41" rx="5" ry="2" fill="#d3d3d3"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="35" cy="32" r="2" fill="#333"/>
+  <circle cx="45" cy="32" r="2" fill="#333"/>
+  
+  <!-- 眼镜 -->
+  <circle cx="35" cy="32" r="4" fill="none" stroke="#333" stroke-width="1"/>
+  <circle cx="45" cy="32" r="4" fill="none" stroke="#333" stroke-width="1"/>
+  <line x1="39" y1="32" x2="41" y2="32" stroke="#333" stroke-width="1"/>
+  
+  <!-- 鼻子 -->
+  <ellipse cx="40" cy="37" rx="1.5" ry="2" fill="#f4a460"/>
+  
+  <!-- 嘴巴 -->
+  <path d="M 37 43 Q 40 45 43 43" stroke="#333" stroke-width="1" fill="none"/>
+  
+  <!-- 蓬乱的头发 -->
+  <path d="M 22 28 Q 25 15 30 18 Q 35 12 40 20 Q 45 12 50 18 Q 55 15 58 28" fill="#d3d3d3"/>
+  <path d="M 22 28 Q 18 35 22 42 Q 25 38 28 40" fill="#d3d3d3"/>
+  <path d="M 58 28 Q 62 35 58 42 Q 55 38 52 40" fill="#d3d3d3"/>
+  
+  <!-- 西装 -->
+  <rect x="25" y="55" width="30" height="25" fill="#2f4f4f" rx="5"/>
+  <rect x="35" y="55" width="10" height="25" fill="white"/>
+  
+  <!-- 文字标识 -->
+  <text x="40" y="72" text-anchor="middle" font-family="serif" font-size="7" fill="white">爱</text>
+</svg>

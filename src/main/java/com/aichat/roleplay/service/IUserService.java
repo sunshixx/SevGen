@@ -1,6 +1,7 @@
 package com.aichat.roleplay.service;
 
 import com.aichat.roleplay.model.User;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
 
@@ -65,6 +66,15 @@ public interface IUserService {
      * @return 是否存在
      */
     boolean existsByEmail(String email);
+
+    /**
+     * 更新用户头像
+     *
+     * @param userId 用户ID
+     * @param file 头像文件
+     * @return 头像URL
+     */
+    String updateUserAvatar(Long userId, MultipartFile file);
 
     /**
      * 验证密码

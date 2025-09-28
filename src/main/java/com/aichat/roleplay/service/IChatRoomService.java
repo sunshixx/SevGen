@@ -92,6 +92,15 @@ public interface IChatRoomService extends IService<ChatRoom> {
     boolean deleteChatRoomRole(Long id);
 
     /**
+     * 删除整个聊天室（包括所有角色和消息）
+     *
+     * @param chatRoomId 聊天室ID
+     * @param userId     用户ID（权限验证）
+     * @return 是否删除成功
+     */
+    boolean deleteChatRoom(Long chatRoomId, Long userId);
+
+    /**
      * 根据聊天室ID和角色ID查询记录
      *
      * @param chatRoomId 聊天室ID

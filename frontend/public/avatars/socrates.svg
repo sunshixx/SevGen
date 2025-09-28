@@ -1,0 +1,29 @@
+<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆 -->
+  <circle cx="40" cy="40" r="40" fill="#f0f8ff"/>
+  
+  <!-- 头部 -->
+  <circle cx="40" cy="35" r="18" fill="#fdbcb4"/>
+  
+  <!-- 胡须 -->
+  <ellipse cx="40" cy="48" rx="12" ry="8" fill="#d3d3d3"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="35" cy="32" r="2" fill="#333"/>
+  <circle cx="45" cy="32" r="2" fill="#333"/>
+  
+  <!-- 鼻子 -->
+  <ellipse cx="40" cy="37" rx="1.5" ry="2" fill="#f4a460"/>
+  
+  <!-- 嘴巴 -->
+  <path d="M 36 42 Q 40 45 44 42" stroke="#333" stroke-width="1" fill="none"/>
+  
+  <!-- 头发 -->
+  <path d="M 25 28 Q 30 20 40 22 Q 50 20 55 28 Q 52 25 40 25 Q 28 25 25 28" fill="#d3d3d3"/>
+  
+  <!-- 长袍 -->
+  <rect x="25" y="55" width="30" height="25" fill="#8b4513" rx="5"/>
+  
+  <!-- 文字标识 -->
+  <text x="40" y="72" text-anchor="middle" font-family="serif" font-size="8" fill="white">苏</text>
+</svg>

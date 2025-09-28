@@ -1,0 +1,31 @@
+<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆 -->
+  <circle cx="40" cy="40" r="40" fill="#fff8dc"/>
+  
+  <!-- 头部 -->
+  <circle cx="40" cy="35" r="18" fill="#fdbcb4"/>
+  
+  <!-- 胡须 -->
+  <ellipse cx="40" cy="48" rx="10" ry="6" fill="#2f4f4f"/>
+  
+  <!-- 眼睛 -->
+  <ellipse cx="35" cy="32" rx="2" ry="1.5" fill="#333"/>
+  <ellipse cx="45" cy="32" rx="2" ry="1.5" fill="#333"/>
+  
+  <!-- 鼻子 -->
+  <ellipse cx="40" cy="37" rx="1.5" ry="2" fill="#f4a460"/>
+  
+  <!-- 嘴巴 -->
+  <path d="M 36 42 Q 40 44 44 42" stroke="#333" stroke-width="1" fill="none"/>
+  
+  <!-- 头发和帽子 -->
+  <path d="M 25 28 Q 30 18 40 20 Q 50 18 55 28 Q 52 22 40 22 Q 28 22 25 28" fill="#2f4f4f"/>
+  <rect x="30" y="18" width="20" height="8" fill="#8b0000" rx="2"/>
+  
+  <!-- 传统服装 -->
+  <rect x="25" y="55" width="30" height="25" fill="#8b0000" rx="5"/>
+  <rect x="28" y="58" width="24" height="19" fill="#daa520" rx="3"/>
+  
+  <!-- 文字标识 -->
+  <text x="40" y="72" text-anchor="middle" font-family="serif" font-size="8" fill="#8b0000">孔</text>
+</svg>

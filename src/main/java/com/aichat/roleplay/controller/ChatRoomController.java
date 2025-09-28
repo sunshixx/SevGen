@@ -258,6 +258,36 @@ public class ChatRoomController {
     }
 
     /**
+     * 删除整个聊天室
+     */
+    @DeleteMapping("/room/{chatRoomId}")
+    public ResponseEntity<Void> deleteChatRoom(@PathVariable Long chatRoomId) {
+        
+        log.info("删除聊天室: {}", chatRoomId);
+        
+        try {
+            // 从UserContext中获取当前用户ID
+            Long currentUserId = com.aichat.roleplay.context.UserContext.getCurrentUserId();
+            if (currentUserId == null) {
+                log.error("删除聊天室失败: 用户未登录");
+                return ResponseEntity.status(401).build();
+            }
+            
+            boolean success = chatRoomService.deleteChatRoom(chatRoomId, currentUserId);
+            if (success) {
+                log.info("聊天室 {} 删除成功", chatRoomId);
+                return ResponseEntity.ok().build();
+            } else {
+                log.error("聊天室 {} 删除失败", chatRoomId);
+                return ResponseEntity.badRequest().build();
+            }
+        } catch (Exception e) {
+            log.error("删除聊天室失败", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
      * 根据聊天室ID和角色ID查询记录
      */
     @GetMapping("/{chatRoomId}/role/{roleId}")

@@ -193,11 +193,12 @@
               <div class="message-avatar">
                 <el-avatar 
                   :size="32"
-                  :src="message.type === 'user' ? '' : getRoleAvatar(getRoleById(message.roleId))"
-                  :style="{ backgroundColor: message.type === 'user' ? '#409EFF' : (getRoleAvatar(getRoleById(message.roleId)) ? 'transparent' : '#67C23A') }"
+                  :src="message.type === 'user' ? authStore.userInfo?.avatar : (getRoleById(message.roleId)?.avatar || '')"
+                  :style="{ backgroundColor: message.type === 'user' ? (authStore.userInfo?.avatar ? 'transparent' : '#409EFF') : (getRoleById(message.roleId)?.avatar ? 'transparent' : '#67C23A') }"
                   @error="handleAvatarError"
                 >
-                  <span>{{ message.senderName?.charAt(0) || 'U' }}</span>
+                  <span v-if="message.type === 'user'">{{ authStore.userInfo?.username?.charAt(0)?.toUpperCase() || 'U' }}</span>
+                  <span v-else>{{ getRoleById(message.roleId)?.name?.charAt(0)?.toUpperCase() || message.senderName?.charAt(0)?.toUpperCase() || 'R' }}</span>
                 </el-avatar>
                 <div class="avatar-status" :class="{ 'online': message.type === 'ai' }"></div>
               </div>
@@ -634,6 +635,7 @@ const handleSendMessage = async () => {
               const newAiMessage = {
                 id: Date.now() + Math.random(),
                 type: 'ai',
+                roleId: data.roleId,  // 添加roleId字段
                 senderName: data.roleName,
                 content: '',
                 timestamp: new Date()
@@ -1509,7 +1511,7 @@ const renderMarkdown = (content) => {
 
 .message-wrapper {
   display: flex;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   animation: messageSlideIn 0.3s ease-out;
 }
 
@@ -1534,7 +1536,7 @@ const renderMarkdown = (content) => {
 
 .message-bubble {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   max-width: 70%;
   align-items: flex-start;
 }
@@ -1595,7 +1597,7 @@ const renderMarkdown = (content) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   gap: 12px;
 }
 
@@ -1621,7 +1623,7 @@ const renderMarkdown = (content) => {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(15px);
   border-radius: 18px;
-  padding: 12px 16px;
+  padding: 10px 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
@@ -1655,7 +1657,7 @@ const renderMarkdown = (content) => {
 .text-content h1, .text-content h2, .text-content h3, 
 .text-content h4, .text-content h5, .text-content h6 {
   color: #fff;
-  margin: 16px 0 8px 0;
+  margin: 12px 0 6px 0;
   font-weight: 600;
 }
 
@@ -1664,7 +1666,7 @@ const renderMarkdown = (content) => {
 .text-content h3 { font-size: 1.1em; }
 
 .text-content p {
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 .text-content code {
@@ -1678,10 +1680,10 @@ const renderMarkdown = (content) => {
 
 .text-content pre {
   background: rgba(0, 0, 0, 0.4);
-  padding: 12px;
+  padding: 10px;
   border-radius: 8px;
   overflow-x: auto;
-  margin: 12px 0;
+  margin: 10px 0;
   border-left: 4px solid #409EFF;
 }
 
@@ -1694,18 +1696,18 @@ const renderMarkdown = (content) => {
 .text-content blockquote {
   border-left: 4px solid #409EFF;
   padding-left: 12px;
-  margin: 12px 0;
+  margin: 10px 0;
   color: rgba(255, 255, 255, 0.8);
   font-style: italic;
 }
 
 .text-content ul, .text-content ol {
-  margin: 8px 0;
+  margin: 6px 0;
   padding-left: 20px;
 }
 
 .text-content li {
-  margin: 4px 0;
+  margin: 2px 0;
 }
 
 .text-content strong {
