@@ -5,6 +5,17 @@
 
 一个基于Spring Boot + Vue.js的智能AI角色扮演聊天平台，支持单角色语音对话和多角色协作聊天。
 
+[![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square&logo=openjdk)](https://openjdk.org/projects/jdk/17/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-brightgreen?style=flat-square&logo=spring-boot)](https://spring.io/projects/spring-boot)
+[![Vue.js](https://img.shields.io/badge/Vue.js-3.0-4FC08D?style=flat-square&logo=vue.js)](https://vuejs.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-blue?style=flat-square&logo=mysql)](https://www.mysql.com/)
+[![LangChain4j](https://img.shields.io/badge/LangChain4j-0.34.0-purple?style=flat-square)](https://github.com/langchain4j/langchain4j)
+
+[🚀 快速开始](#-快速开始) • [✨ 核心特性](#-核心特性) • [🛠️ 技术栈](#️-技术栈) • [📖 API文档](#-api文档)
+
+</div>
+
+---
 ## 技术亮点
 
 ### RAG知识检索系统
@@ -31,101 +42,64 @@
 - **智能角色选择**：基于通用聊天历史选择合适角色，避免角色间信息泄露
 - **并发安全**：多角色并发响应时保证各自上下文的独立性和安全性
 
-[![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square&logo=openjdk)](https://openjdk.org/projects/jdk/17/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-brightgreen?style=flat-square&logo=spring-boot)](https://spring.io/projects/spring-boot)
-[![Vue.js](https://img.shields.io/badge/Vue.js-3.0-4FC08D?style=flat-square&logo=vue.js)](https://vuejs.org/)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0-blue?style=flat-square&logo=mysql)](https://www.mysql.com/)
-[![LangChain4j](https://img.shields.io/badge/LangChain4j-0.34.0-purple?style=flat-square)](https://github.com/langchain4j/langchain4j)
-
-[🚀 快速开始](#-快速开始) • [✨ 核心特性](#-核心特性) • [🛠️ 技术栈](#️-技术栈) • [📖 API文档](#-api文档)
-
-</div>
-
----
-
 ## 核心特性
 
-### 语音交互系统
-- **语音转文字**：支持实时语音输入，自动转换为文字
-- **文字转语音**：AI回复自动生成语音，支持自然语音播放
-- **音频处理**：完整的音频上传、处理和存储流程
-- **语音消息管理**：支持语音消息的播放控制和历史记录
+### 🎭 智能AI角色广场
+<div align="center">
+<img src="docs/images/chat-plaza.png" alt="聊天广场界面" width="700"/>
+</div>
 
-### 多角色协作聊天
+- **丰富角色库**：10个精心设计的AI角色，涵盖历史人物、虚拟角色、专业专家
+- **智能分类**：按照历史人物、文学艺术、科学家、编程技术等类别组织角色
+- **快速搜索**：支持角色名称和类别的快速搜索功能
+- **角色预览**：每个角色都有详细的介绍和专业领域说明
+
+### 👥 多角色协作聊天室
+<div align="center">
+<img src="docs/images/chatroom.png" alt="多角色聊天室界面" width="700"/>
+</div>
+
 - **智能角色选择**：基于用户消息内容自动选择最适合的AI角色参与对话
 - **并发流式响应**：多个AI角色同时生成回复，实时流式输出
 - **角色管理**：支持动态添加/移除聊天室中的AI角色
 - **协作对话**：多个AI角色可以在同一聊天室中协同工作
 
-### 智能AI系统
-- **10个预设角色**：包含历史人物、虚拟角色、专业专家等多种类型
-- **角色扮演**：每个AI角色都有独特的性格、知识背景和对话风格
-- **上下文理解**：支持长对话的上下文记忆和理解
-- **实时流式输出**：支持SSE实时流式响应，提升用户体验
+### 🎤 单角色深度对话
+<div align="center">
+<img src="docs/images/agent-chat.png" alt="Agent单聊界面" width="700"/>
+</div>
 
-### 用户认证系统
+- **语音交互**：支持语音输入和语音回复，提供自然的对话体验
+- **深度对话**：基于RAG知识检索，提供专业且有深度的对话内容
+- **代码支持**：支持代码片段的展示和语法高亮
+- **多媒体消息**：支持文本、语音、代码等多种消息类型
+
+### 🔐 用户认证系统
 - **JWT认证**：基于JWT的无状态身份验证
 - **邮箱验证**：用户注册需要邮箱验证激活
 - **安全防护**：完善的用户认证和授权机制
 
 ---
 
-## 界面展示
-
-### 聊天广场 - AI角色选择
-<div align="center">
-<img src="docs/images/chat-plaza.png" alt="聊天广场界面" width="800"/>
-</div>
-
-**功能特点**：
-- 🎭 **丰富角色库**：展示10个精心设计的AI角色，涵盖历史人物、虚拟角色、专业专家
-- 🏷️ **智能分类**：按照历史人物、文学艺术、科学家、编程技术等类别组织角色
-- 🔍 **快速搜索**：支持角色名称和类别的快速搜索功能
-- 💡 **角色预览**：每个角色都有详细的介绍和专业领域说明
-
-### 多角色协作聊天室
-<div align="center">
-<img src="docs/images/chatroom.png" alt="多角色聊天室界面" width="800"/>
-</div>
-
-**核心功能**：
-- 👥 **多角色协作**：支持多个AI角色在同一聊天室中协同对话
-- 🎯 **智能角色选择**：系统根据用户消息内容自动选择最合适的角色参与讨论
-- 💬 **实时流式响应**：多个角色并发生成回复，提供流畅的对话体验
-- 🔄 **动态角色管理**：可以随时添加或移除聊天室中的AI角色
-
-### 单角色深度对话
-<div align="center">
-<img src="docs/images/agent-chat.png" alt="Agent单聊界面" width="800"/>
-</div>
-
-**交互特色**：
-- 🎤 **语音交互**：支持语音输入和语音回复，提供自然的对话体验
-- 🧠 **深度对话**：基于RAG知识检索，提供专业且有深度的对话内容
-- 📝 **代码支持**：支持代码片段的展示和语法高亮
-- 🎵 **多媒体消息**：支持文本、语音、代码等多种消息类型
-
----
-
 ## 技术栈
 
-**后端技术**
-- **Java 17** + **Spring Boot 3.2.0**
-- **Spring Security** + **JWT认证**
-- **MySQL 8.0** 数据库
-- **MyBatis Plus** ORM框架
-- **Server-Sent Events (SSE)** 实时通信
-- **Maven** 项目管理
+### 后端技术
+- **Java 17** + **Spring Boot 3.2.0** - 现代化Java企业级开发
+- **Spring Security** + **JWT认证** - 安全认证体系
+- **MySQL 8.0** + **MyBatis Plus** - 数据持久化
+- **Server-Sent Events (SSE)** - 实时流式通信
+- **LangChain4j** - AI大模型集成框架
+- **Maven** - 项目构建管理
 
-**前端技术**
-- **Vue.js 3** + **TypeScript**
-- **Element Plus** UI组件库
-- **Pinia** 状态管理
-- **Axios** HTTP客户端
-- **Vite** 构建工具
+### 前端技术
+- **Vue.js 3** + **TypeScript** - 现代化前端框架
+- **Element Plus** - 企业级UI组件库
+- **Pinia** - 新一代状态管理
+- **Axios** - HTTP客户端
+- **Vite** - 极速构建工具
 
-**核心架构**
-- **RESTful API** 设计
+### 核心架构
+- **RESTful API** 设计规范
 - **响应式编程** 模式
 - **微服务架构** 思想
 - **前后端分离** 架构
@@ -355,15 +329,51 @@ SevGen/
 - 提供详细的问题描述和复现步骤
 - 包含相关的错误日志和环境信息
 
+---
+
+## 项目贡献者
+
+### 核心开发团队
+- **项目发起人 & 架构师**: [@sunshixx](https://github.com/sunshixx)
+  - 项目整体架构设计
+  - 后端核心功能开发
+  - RAG知识检索系统实现
+
+### 第一版贡献者
+感谢以下开发者对项目初期版本的重要贡献：
+
+- **[@sunshixx](https://github.com/sunshixx)** - 项目创始人，完成了整个系统的基础架构
+- **前端开发** - Vue.js界面设计与交互实现
+- **后端开发** - Spring Boot微服务架构搭建
+- **AI集成** - LangChain4j集成与多角色对话系统
+- **数据库设计** - MySQL数据模型设计与优化
+
+### 特别致谢
+- **LangChain4j社区** - 提供了优秀的Java AI开发框架
+- **Vue.js社区** - 现代化前端开发支持
+- **Spring Boot团队** - 企业级Java开发框架
+- **所有测试用户** - 提供了宝贵的使用反馈和建议
+
+### 如何成为贡献者
+我们欢迎任何形式的贡献，包括但不限于：
+- 🐛 Bug修复
+- ✨ 新功能开发
+- 📝 文档完善
+- 🎨 UI/UX改进
+- 🧪 测试用例编写
+- 🌐 国际化支持
+
+---
+
 ## 许可证
 
 本项目采用 [MIT License](LICENSE) 开源协议。
 
 ## 联系方式
 
-- **项目维护者**: [Your Name]
-- **邮箱**: [your.email@example.com]
-- **GitHub**: [https://github.com/yourusername/SevGen]
+- **项目维护者**: [@sunshixx](https://github.com/sunshixx)
+- **项目地址**: [https://github.com/sunshixx/SevGen](https://github.com/sunshixx/SevGen)
+- **问题反馈**: [GitHub Issues](https://github.com/sunshixx/SevGen/issues)
 
 ---
 
@@ -372,5 +382,7 @@ SevGen/
 **感谢使用 SevGen AI角色扮演聊天系统！**
 
 如果这个项目对您有帮助，请给我们一个 ⭐ Star
+
+[🚀 立即开始](https://github.com/sunshixx/SevGen) • [📖 查看文档](https://github.com/sunshixx/SevGen/wiki) • [💬 加入讨论](https://github.com/sunshixx/SevGen/discussions)
 
 </div>
