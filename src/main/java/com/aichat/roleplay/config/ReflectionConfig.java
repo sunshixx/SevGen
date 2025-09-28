@@ -95,31 +95,31 @@ public class ReflectionConfig {
         List<String> allKeywords = new ArrayList<>();
         
         // 加载各类关键词文件
-        allKeywords.addAll(loadKeywordsFromFile(keywordFiles.getIdentityExposure()));
-        allKeywords.addAll(loadKeywordsFromFile(keywordFiles.getRoleBreaking()));
-        allKeywords.addAll(loadKeywordsFromFile(keywordFiles.getOverDeflection()));
-        allKeywords.addAll(loadKeywordsFromFile(keywordFiles.getTechnicalExposure()));
+        allKeywords.addAll(loadKeywordsFromFile(keywordFiles.identityExposure));
+        allKeywords.addAll(loadKeywordsFromFile(keywordFiles.roleBreaking));
+        allKeywords.addAll(loadKeywordsFromFile(keywordFiles.overDeflection));
+        allKeywords.addAll(loadKeywordsFromFile(keywordFiles.technicalExposure));
         
         this.anomalousKeywords = allKeywords;
         
-        log.info("异常检测关键词加载完成！总数: {}", allKeywords.size());
+        System.out.println("异常检测关键词加载完成！总数: " + allKeywords.size());
         
         // 显示部分关键词样本
-        log.info("关键词样本:");
+        System.out.println("关键词样本:");
         allKeywords.stream().limit(3).forEach(keyword -> 
-            log.info("   • {}", keyword));
+            System.out.println("   • " + keyword));
     }
     
     /**
      * 从指定文件加载关键词
      */
     private List<String> loadKeywordsFromFile(String filePath) {
-        List<String> keywords = new ArrayList<>();
+        List<String> keywords = new ArrayList<String>();
         
         try {
             ClassPathResource resource = new ClassPathResource(filePath);
             if (!resource.exists()) {
-                log.warn("关键词文件不存在: {}", filePath);
+                System.out.println("关键词文件不存在: " + filePath);
                 return keywords;
             }
             
@@ -136,11 +136,11 @@ public class ReflectionConfig {
                     }
                 }
                 
-                log.info("从文件 {} 加载了 {} 个关键词", filePath, keywords.size());
+                System.out.println("从文件 " + filePath + " 加载了 " + keywords.size() + " 个关键词");
             }
             
         } catch (Exception e) {
-            log.error("加载关键词文件失败: {}", filePath, e);
+            System.out.println("加载关键词文件失败: " + filePath + ", 错误: " + e.getMessage());
         }
         
         return keywords;

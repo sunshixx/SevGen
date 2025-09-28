@@ -18,6 +18,15 @@
             @input="handleSearch"
             @clear="handleSearchClear"
           />
+          <el-button 
+            type="primary" 
+            size="large"
+            @click="$router.push('/chatrooms')"
+            class="chatroom-btn"
+          >
+            <el-icon><ChatLineRound /></el-icon>
+            聊天室
+          </el-button>
         </div>
         
         <div class="user-section">
@@ -39,6 +48,9 @@
                 </el-dropdown-item>
                 <el-dropdown-item command="chats">
                   <el-icon><ChatDotRound /></el-icon> 我的对话
+                </el-dropdown-item>
+                <el-dropdown-item command="chatrooms">
+                  <el-icon><ChatLineRound /></el-icon> 聊天室
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <el-icon><SwitchButton /></el-icon> 退出登录
@@ -144,6 +156,7 @@ import {
   ArrowDown, 
   User, 
   ChatDotRound, 
+  ChatLineRound,
   SwitchButton
 } from '@element-plus/icons-vue'
 import { useAuthStore, useRoleStore } from '@/stores'
@@ -238,6 +251,9 @@ const handleUserCommand = async (command: string) => {
     case 'chats':
       // TODO: 跳转到对话列表页面
       ElMessage.info('对话列表功能开发中...')
+      break
+    case 'chatrooms':
+      router.push('/chatrooms')
       break
     case 'logout':
       try {
@@ -401,6 +417,16 @@ const handleUserCommand = async (command: string) => {
   margin-bottom: 16px;
 }
 
+.search-section {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.chatroom-btn {
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;
@@ -411,6 +437,13 @@ const handleUserCommand = async (command: string) => {
   
   .search-section {
     width: 100%;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  .chatroom-btn {
+    flex-shrink: 0;
   }
   
   .search-section .el-input {
