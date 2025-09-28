@@ -341,12 +341,17 @@ SevGen/
 
 ### 第一版贡献者
 感谢以下开发者对项目初期版本的重要贡献：
+## 贡献者
 
-- **[@sunshixx](https://github.com/sunshixx)** - 项目创始人，完成了整个系统的基础架构
-- **前端开发** - Vue.js界面设计与交互实现
-- **后端开发** - Spring Boot微服务架构搭建
-- **AI集成** - LangChain4j集成与多角色对话系统
-- **数据库设计** - MySQL数据模型设计与优化
+<a href="https://github.com/sunshixx">
+  <img src="https://github.com/sunshixx.png" width="50" height="50" alt="sunshixx" style="border-radius: 50%;">
+</a>
+<a href="https://github.com/in-pluto">
+  <img src="https://github.com/in-pluto.png" width="50" height="50" alt="contributor1" style="border-radius: 50%;">
+</a>
+<a href="https://github.com/huxg-99">
+  <img src="https://github.com/huxg-99.png" width="50" height="50" alt="contributor1" style="border-radius: 50%;">
+</a>
 
 ### 特别致谢
 - **LangChain4j社区** - 提供了优秀的Java AI开发框架
