@@ -156,7 +156,7 @@ public class SseService {
                         
                         // 发送完成标记（仅SSE模式）
                         if (emitter != null) {
-                            emitter.send("data: " + token + "\n\n");
+                            emitter.send(SseEmitter.event().data(token));
                         }
                         
                         // 统一的反思处理
@@ -167,7 +167,7 @@ public class SseService {
                         
                         // 发送token（仅SSE模式）
                         if (emitter != null) {
-                            emitter.send("data: " + token + "\n\n");
+                            emitter.send(SseEmitter.event().data(token));
                         }
                     } else {
                         handleProcessingError(emitter, responseFuture, new RuntimeException("AI回复错误"));
@@ -205,7 +205,7 @@ public class SseService {
                 
                 // 发送重试提示（仅SSE模式）
                 if (emitter != null) {
-                    emitter.send("data: [RETRY] 重新生成中...\n\n");
+                    emitter.send(SseEmitter.event().data("[RETRY] 重新生成中..."));
                 }
                 
                 // 递归重试
@@ -241,7 +241,7 @@ public class SseService {
             // 处理SSE响应
             if (emitter != null) {
                 if (errorMessage != null) {
-                    emitter.send("data: [ERROR] " + errorMessage + "\n\n");
+                    emitter.send(SseEmitter.event().data("[ERROR] " + errorMessage));
                 }
                 emitter.complete();
             }
@@ -269,7 +269,7 @@ public class SseService {
     // SSE错误处理
     private void handleStreamError(SseEmitter emitter, Exception e) {
         try {
-            emitter.send("data: [ERROR] " + e.getMessage() + "\n\n");
+            emitter.send(SseEmitter.event().data("[ERROR] " + e.getMessage()));
             emitter.completeWithError(e);
         } catch (Exception sendEx) {
             log.error("发送错误失败", sendEx);

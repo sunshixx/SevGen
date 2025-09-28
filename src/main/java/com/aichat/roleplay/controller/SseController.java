@@ -32,7 +32,7 @@ public class SseController {
             // 返回错误的SSE流
             SseEmitter errorEmitter = new SseEmitter();
             try {
-                errorEmitter.send("data: [ERROR] " + e.getMessage() + "\n\n");
+                errorEmitter.send(SseEmitter.event().data("[ERROR] " + e.getMessage()));
                 errorEmitter.complete();
             } catch (Exception sendEx) {
                 errorEmitter.completeWithError(sendEx);
@@ -56,7 +56,7 @@ public class SseController {
             // 返回错误的SSE流
             SseEmitter errorEmitter = new SseEmitter();
             try {
-                errorEmitter.send("data: {\"type\":\"ERROR\",\"message\":\"" + e.getMessage() + "\"}\n\n");
+                errorEmitter.send(SseEmitter.event().data("{\"type\":\"ERROR\",\"message\":\"" + e.getMessage() + "\"}"));
                 errorEmitter.complete();
             } catch (Exception sendEx) {
                 errorEmitter.completeWithError(sendEx);
