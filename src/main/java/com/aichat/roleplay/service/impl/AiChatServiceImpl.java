@@ -36,18 +36,12 @@ public class AiChatServiceImpl implements IAiChatService {
 
 
 
-    @Override
-    public String generateCharacterResponse(String roleName, String characterPrompt, String userMessage) {
-        return "";
-    }
 
     @Override
     public void generateStreamResponseDirect(String fullPrompt, StreamResponseCallback callback) {
         log.debug("开始直接使用完整prompt生成流式AI回复");
 
         StringBuilder aiAnswer = new StringBuilder();
-        StringBuilder tokenBuffer = new StringBuilder();
-        final int TOKEN_BATCH_SIZE = 200; // 每批推送字符数，可根据实际情况调整
 
         try {
             List<ChatMessage> messages = List.of(
@@ -58,12 +52,17 @@ public class AiChatServiceImpl implements IAiChatService {
             streamingChatLanguageModel.generate(messages, new StreamingResponseHandler<AiMessage>() {
                 @Override
                 public void onNext(String token) {
+                    log.info("AI服务收到token: '{}', 长度: {}, 类型: {}", 
+                            token, token != null ? token.length() : 0, 
+                            token != null ? token.getClass().getSimpleName() : "null");
                     aiAnswer.append(token);
-                    tokenBuffer.append(token);
-                    // 每到一定长度就推送一次，避免单次 token 过长
-                    if (tokenBuffer.length() >= TOKEN_BATCH_SIZE) {
-                        callback.onResponse(tokenBuffer.toString());
-                        tokenBuffer.setLength(0);
+                    // 实时推送每个token，确保前端能立即接收到ROLE_MESSAGE
+                    log.info("AI服务准备推送token到callback: '{}'", token);
+                    try {
+                        callback.onResponse(token);
+                        log.info("AI服务成功推送token到callback: '{}'", token);
+                    } catch (Exception e) {
+                        log.error("AI服务推送token到callback失败: '{}'", token, e);
                     }
                 }
 
@@ -75,13 +74,9 @@ public class AiChatServiceImpl implements IAiChatService {
 
                 @Override
                 public void onComplete(Response<AiMessage> response) {
-                    // 推送剩余未发出的 token
-                    if (tokenBuffer.length() > 0) {
-                        callback.onResponse(tokenBuffer.toString());
-                        tokenBuffer.setLength(0);
-                    }
                     String finalAnswer = aiAnswer.toString();
                     log.debug("直接prompt流式回复完成，长度: {}", finalAnswer.length());
+                    log.info("完整AI回复内容: '{}'", finalAnswer);
 
                     if (response == null || response.content() == null) {
                         log.warn("onComplete 收到空的 response");

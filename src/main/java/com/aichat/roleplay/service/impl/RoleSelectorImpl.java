@@ -2,30 +2,31 @@ package com.aichat.roleplay.service.impl;
 
 import com.aichat.roleplay.dto.RoleSelectionResult;
 import com.aichat.roleplay.model.Role;
-import com.aichat.roleplay.service.IAiChatService;
 import com.aichat.roleplay.service.IRoleSelector;
+import com.aichat.roleplay.util.RolePromptEngineering;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.model.chat.ChatLanguageModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * 角色选择器实现类
- * 使用LLM智能选择最适合的角色参与聊天室对话
+ * 直接使用LangChain4j的ChatLanguageModel与大模型交互（同步调用）
  */
 @Slf4j
 @Service
 public class RoleSelectorImpl implements IRoleSelector {
 
     @Autowired
-    private IAiChatService aiChatService;
+    private ChatLanguageModel chatLanguageModel;
     
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -35,7 +36,7 @@ public class RoleSelectorImpl implements IRoleSelector {
         
         if (availableRoles == null || availableRoles.isEmpty()) {
             log.warn("没有可用角色");
-            return new RoleSelectionResult(new ArrayList<>(), "没有可用角色", 0.0);
+            return new RoleSelectionResult(List.of(), "没有可用角色", 0.0);
         }
         
         // 如果角色数量小于等于topK，直接返回所有角色
@@ -43,14 +44,15 @@ public class RoleSelectorImpl implements IRoleSelector {
             log.info("可用角色数量({})小于等于请求数量({})，返回所有角色", availableRoles.size(), topK);
             List<Long> allRoleIds = availableRoles.stream()
                     .map(Role::getId)
-                    .collect(Collectors.toList());
+                    .toList();
             return new RoleSelectionResult(allRoleIds, "角色数量不足，返回所有可用角色", 1.0);
         }
         
         try {
-            // 使用LLM进行智能角色选择
+            // 使用LangChain4j直接与大模型交互（同步调用）
             String prompt = buildRoleSelectionPrompt(userMessage, availableRoles, topK, context);
-            String llmResponse = aiChatService.generateCharacterResponse("", "", prompt);
+
+            String llmResponse = chatLanguageModel.generate(prompt);
             
             // 解析LLM响应
             RoleSelectionResult result = parseLLMResponse(llmResponse, availableRoles);
@@ -66,7 +68,7 @@ public class RoleSelectorImpl implements IRoleSelector {
             List<Long> fallbackRoleIds = availableRoles.stream()
                     .limit(topK)
                     .map(Role::getId)
-                    .collect(Collectors.toList());
+                    .toList();
             return new RoleSelectionResult(fallbackRoleIds, "LLM选择失败，使用回退策略", 0.5);
         }
     }

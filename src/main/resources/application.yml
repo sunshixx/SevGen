@@ -103,10 +103,10 @@ rag:
 chatroom:
   collaboration:
     # 选择参与对话的角色数量
-    top-k-roles: 3
+    top-k-roles: 2
     # 最大并发角色数量
-    max-concurrent-roles: 5
+    max-concurrent-roles: 2
     # 角色选择超时时间（毫秒）
-    role-selection-timeout: 10000
+    role-selection-timeout: 100000
     # 流式响应超时时间（毫秒）
-    stream-timeout: 60000
+    stream-timeout: 600000

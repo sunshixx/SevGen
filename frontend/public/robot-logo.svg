@@ -1,0 +1,66 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- 对话气泡 -->
+  <path d="M20 40 Q20 20 40 20 L140 20 Q160 20 160 40 L160 80 Q160 100 140 100 L60 100 L40 120 L40 100 Q20 100 20 80 Z" fill="#FF8C42"/>
+  
+  <!-- 气泡中的圆点 -->
+  <circle cx="60" cy="60" r="8" fill="white"/>
+  <circle cx="90" cy="60" r="8" fill="white"/>
+  <circle cx="120" cy="60" r="8" fill="white"/>
+  
+  <!-- 机器人头部天线 -->
+  <rect x="198" y="40" width="4" height="40" fill="#2C3E50"/>
+  <circle cx="200" cy="40" r="15" fill="#2C3E50"/>
+  <circle cx="200" cy="40" r="8" fill="#FF8C42"/>
+  
+  <!-- 机器人头部主体 -->
+  <rect x="140" y="80" width="120" height="80" rx="25" ry="25" fill="#2C3E50" stroke="white" stroke-width="8"/>
+  <rect x="155" y="95" width="90" height="50" rx="15" ry="15" fill="white"/>
+  <rect x="165" y="105" width="70" height="30" rx="10" ry="10" fill="#2C3E50"/>
+  
+  <!-- 机器人眼睛 -->
+  <ellipse cx="185" cy="120" rx="8" ry="12" fill="#00CED1"/>
+  <ellipse cx="215" cy="120" rx="8" ry="12" fill="#00CED1"/>
+  
+  <!-- 机器人嘴巴 -->
+  <circle cx="235" cy="130" r="4" fill="#FF8C42"/>
+  
+  <!-- 机器人耳朵 -->
+  <rect x="120" y="110" width="20" height="25" rx="10" ry="10" fill="#FF8C42" stroke="#2C3E50" stroke-width="3"/>
+  <rect x="260" y="110" width="20" height="25" rx="10" ry="10" fill="#FF8C42" stroke="#2C3E50" stroke-width="3"/>
+  
+  <!-- 机器人身体 -->
+  <rect x="160" y="160" width="80" height="60" rx="15" ry="15" fill="white" stroke="#2C3E50" stroke-width="6"/>
+  <rect x="175" y="175" width="50" height="15" rx="7" ry="7" fill="#4CAF50"/>
+  
+  <!-- 机器人手臂 -->
+  <rect x="80" y="180" width="80" height="15" rx="7" ry="7" fill="#2C3E50"/>
+  <rect x="240" y="180" width="80" height="15" rx="7" ry="7" fill="#2C3E50"/>
+  
+  <!-- 左手 -->
+  <rect x="60" y="195" width="35" height="35" rx="5" ry="5" fill="white" stroke="#2C3E50" stroke-width="4"/>
+  <rect x="70" y="205" width="15" height="15" rx="2" ry="2" fill="#FF8C42"/>
+  
+  <!-- 右手 -->
+  <rect x="305" y="195" width="35" height="35" rx="5" ry="5" fill="white" stroke="#2C3E50" stroke-width="4"/>
+  <rect x="315" y="205" width="15" height="15" rx="2" ry="2" fill="#FF8C42"/>
+  
+  <!-- 手指 -->
+  <rect x="40" y="175" width="8" height="20" rx="4" ry="4" fill="#2C3E50"/>
+  <rect x="50" y="170" width="8" height="25" rx="4" ry="4" fill="#2C3E50"/>
+  <rect x="60" y="175" width="8" height="20" rx="4" ry="4" fill="#2C3E50"/>
+  
+  <rect x="332" y="175" width="8" height="20" rx="4" ry="4" fill="#2C3E50"/>
+  <rect x="342" y="170" width="8" height="25" rx="4" ry="4" fill="#2C3E50"/>
+  <rect x="352" y="175" width="8" height="20" rx="4" ry="4" fill="#2C3E50"/>
+  
+  <!-- 机器人下半身 -->
+  <rect x="170" y="220" width="60" height="80" rx="15" ry="15" fill="white" stroke="#2C3E50" stroke-width="6"/>
+  
+  <!-- 机器人腿部 -->
+  <rect x="150" y="300" width="25" height="40" rx="12" ry="12" fill="#2C3E50"/>
+  <rect x="225" y="300" width="25" height="40" rx="12" ry="12" fill="#2C3E50"/>
+  
+  <!-- 机器人脚部 -->
+  <ellipse cx="162" cy="355" rx="25" ry="15" fill="white" stroke="#2C3E50" stroke-width="4"/>
+  <ellipse cx="237" cy="355" rx="25" ry="15" fill="white" stroke="#2C3E50" stroke-width="4"/>
+</svg>

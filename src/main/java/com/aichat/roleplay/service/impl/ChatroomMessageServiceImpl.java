@@ -146,7 +146,7 @@ public class ChatroomMessageServiceImpl implements IChatroomMessageService {
     public List<ChatroomMessage> getRecentMessages(Long chatRoomId, int limit) {
         log.info("获取聊天室最近消息，聊天室ID: {}, 限制数量: {}", chatRoomId, limit);
         List<ChatroomMessage> messages = chatroomMessageMapper.findRecentByChatRoomId(chatRoomId, limit);
-        // 将消息按时间正序排列（最早的在前面）
+
         Collections.reverse(messages);
         return messages;
     }
@@ -186,24 +186,25 @@ public class ChatroomMessageServiceImpl implements IChatroomMessageService {
         }
 
         StringBuilder historyBuilder = new StringBuilder();
+        int includedMessages = 0;
+        
         for (ChatroomMessage message : recentMessages) {
-            String sender;
+            String sender = null;
+            
             if ("user".equals(message.getSenderType())) {
                 sender = "用户";
-            } else if (message.getRoleId() != null) {
-                if (message.getRoleId().equals(roleId)) {
-                    sender = "我"; // 当前角色的历史消息
-                } else {
-                    sender = "其他AI角色"; // 其他角色的消息，可以根据roleId获取具体角色名称
-                }
-            } else {
-                sender = "AI";
+            } else if (message.getRoleId() != null && message.getRoleId().equals(roleId)) {
+                sender = "我"; // 只包含当前角色自己的历史消息
             }
-            historyBuilder.append(sender).append(": ").append(message.getContent()).append("\n");
+            
+            if (sender != null) {
+                historyBuilder.append(sender).append(": ").append(message.getContent()).append("\n");
+                includedMessages++;
+            }
         }
 
         String history = historyBuilder.toString().trim();
-        log.debug("构建的角色聊天历史长度: {}", history.length());
+        log.debug("构建的角色聊天历史长度: {}, 包含消息数: {}", history.length(), includedMessages);
         return history;
     }
 }

@@ -62,7 +62,7 @@ public class SseService {
         }
     }
 
-    // 多角色聊天专用：根据角色提示词和用户消息生成响应（不保存到数据库）
+    // 多角色聊天专用：根据角色提示词和用户消息生成响应
     public String generateRoleResponse(String rolePrompt, String userMessage, String chatHistory) {
         log.info("多角色聊天生成响应 - rolePrompt长度:{}, userMessage长度:{}", 
                 rolePrompt != null ? rolePrompt.length() : 0, 
@@ -127,10 +127,16 @@ public class SseService {
 
             // 保存用户消息（仅在第一次调用且需要保存时）
             if (retryCount == 0 && saveMessages) {
+                log.info("开始保存用户消息，chatId: {}, roleId: {}, content: {}", chatId, roleId, actualUserMessage.substring(0, Math.min(50, actualUserMessage.length())) + "...");
                 Message userMsg = Message.builder()
                         .chatId(chatId).roleId(roleId)
                         .senderType("user").content(actualUserMessage).build();
-                messageMapper.insert(userMsg);
+                int result = messageMapper.insert(userMsg);
+                if (result > 0) {
+                    log.info("用户消息保存成功，消息ID: {}", userMsg.getId());
+                } else {
+                    log.error("用户消息保存失败");
+                }
             }
 
             Role role = roleMapper.findById(roleId);
@@ -274,10 +280,16 @@ public class SseService {
     // 保存AI消息
     private void saveAiMessage(Long chatId, Long roleId, String aiResponse) {
         try {
+            log.info("开始保存AI消息，chatId: {}, roleId: {}, content: {}", chatId, roleId, aiResponse.substring(0, Math.min(50, aiResponse.length())) + "...");
             Message aiMsg = Message.builder()
                     .chatId(chatId).roleId(roleId)
                     .senderType("ai").content(aiResponse).build();
-            messageMapper.insert(aiMsg);
+            int result = messageMapper.insert(aiMsg);
+            if (result > 0) {
+                log.info("AI消息保存成功，消息ID: {}", aiMsg.getId());
+            } else {
+                log.error("AI消息保存失败");
+            }
         } catch (Exception e) {
             log.error("保存AI消息失败", e);
         }

@@ -4,7 +4,8 @@
     <header class="header">
       <div class="header-content">
         <div class="logo">
-          <h1>🎭 AI角色聊天</h1>
+          <img src="/robot-logo.svg" alt="Agent广场" class="logo-image">
+          <h1>Agent广场</h1>
         </div>
         
         <div class="search-section">
@@ -281,12 +282,13 @@ const handleUserCommand = async (command: string) => {
 }
 
 .header {
-  background: white;
+  background: #fff;
   border-bottom: 1px solid #e4e7ed;
   padding: 0 24px;
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .header-content {
@@ -296,26 +298,109 @@ const handleUserCommand = async (command: string) => {
   align-items: center;
   justify-content: space-between;
   height: 64px;
+  position: relative;
+  z-index: 2;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-image {
+  width: 32px;
+  height: 32px;
 }
 
 .logo h1 {
-  font-size: 24px;
-  color: #303133;
+  font-size: 20px;
+  color: #000;
   margin: 0;
+  font-weight: 600;
 }
 
+@keyframes holographicText {
+  0%, 100% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(180deg); }
+}
+
+/* 搜索框样式 */
+.search-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Element Plus 搜索框样式 */
+:deep(.el-input) {
+  position: relative;
+}
+
+:deep(.el-input__wrapper) {
+  background: #fff !important;
+  border: 1px solid #dcdfe6 !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  transition: border-color 0.2s ease !important;
+}
+
+:deep(.el-input__wrapper:hover) {
+  border-color: #c0c4cc !important;
+}
+
+:deep(.el-input__wrapper:focus-within) {
+  border-color: #409eff !important;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2) !important;
+}
+
+:deep(.el-input__inner) {
+  color: #606266 !important;
+  font-weight: normal;
+}
+
+:deep(.el-input__inner::placeholder) {
+  color: #c0c4cc !important;
+}
+
+:deep(.el-input__prefix) {
+  color: #c0c4cc !important;
+}
+
+/* 聊天室按钮样式 */
+.chatroom-btn {
+  background: #409eff !important;
+  border: 1px solid #409eff !important;
+  border-radius: 4px !important;
+  color: #fff !important;
+  font-weight: normal;
+  padding: 12px 24px !important;
+  transition: all 0.3s ease;
+}
+
+.chatroom-btn:hover {
+  background: #337ecc !important;
+  border-color: #337ecc !important;
+}
+
+/* 用户下拉菜单样式 */
 .user-info {
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: background-color 0.3s;
+  padding: 8px 16px;
+  border-radius: 4px;
+  background: #fff;
+  border: 1px solid #dcdfe6;
+  transition: all 0.3s ease;
 }
 
 .user-info:hover {
   background: #f5f7fa;
+  border-color: #c0c4cc;
 }
 
 .username {
@@ -323,10 +408,31 @@ const handleUserCommand = async (command: string) => {
   color: #303133;
 }
 
+/* Element Plus 下拉菜单样式 */
+:deep(.el-dropdown-menu) {
+  background: #fff !important;
+  border: 1px solid #e4e7ed !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1) !important;
+  padding: 6px 0 !important;
+}
+
+:deep(.el-dropdown-menu__item) {
+  color: #606266 !important;
+  padding: 0 20px !important;
+  line-height: 36px !important;
+  font-size: 14px !important;
+}
+
+:deep(.el-dropdown-menu__item:hover) {
+  background: #f5f7fa !important;
+  color: #409eff !important;
+}
+
 .category-section {
-  background: white;
-  padding: 16px 24px;
+  background: #f5f7fa;
   border-bottom: 1px solid #e4e7ed;
+  padding: 16px 24px;
 }
 
 .category-content {
@@ -334,97 +440,98 @@ const handleUserCommand = async (command: string) => {
   margin: 0 auto;
 }
 
+/* 分类按钮样式 */
+:deep(.el-button-group .el-button) {
+  background: #fff !important;
+  border: 1px solid #dcdfe6 !important;
+  color: #606266 !important;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-button-group .el-button:hover) {
+  background: #ecf5ff !important;
+  border-color: #b3d8ff !important;
+  color: #409eff !important;
+}
+
+:deep(.el-button-group .el-button--primary) {
+  background: #409eff !important;
+  border-color: #409eff !important;
+  color: #fff !important;
+}
+
 .main-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px;
+  padding: 32px 24px;
+  position: relative;
+  z-index: 2;
 }
 
 .roles-container {
-  min-height: 60vh;
-}
-
-.loading-section {
-  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .roles-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
-}
-
-.role-card {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.role-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  border-color: #409eff;
-}
-
-.role-avatar {
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-.role-info {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.role-name {
-  font-size: 20px;
-  font-weight: bold;
-  color: #303133;
-  margin: 0 0 8px 0;
-}
-
-.role-description {
-  color: #606266;
-  font-size: 14px;
-  line-height: 1.5;
-  margin: 0 0 12px 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.role-category {
-  margin-bottom: 8px;
-}
-
-.role-actions {
-  text-align: center;
+  margin-top: 24px;
 }
 
 .empty-section {
-  padding: 60px 20px;
   text-align: center;
+  padding: 80px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.2);
 }
 
 .empty-icon {
   font-size: 80px;
-  margin-bottom: 16px;
+  margin-bottom: 32px;
+  opacity: 0.8;
+  animation: floatIcon 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
 }
 
-.search-section {
-  display: flex;
-  gap: 16px;
-  align-items: center;
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
 }
 
-.chatroom-btn {
-  flex-shrink: 0;
+/* Element Plus Empty 组件样式 */
+:deep(.el-empty__description) {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 16px;
+  margin-bottom: 24px;
+}
+
+:deep(.el-empty .el-button--primary) {
+  background: linear-gradient(135deg, 
+    rgba(0, 255, 255, 0.3) 0%, 
+    rgba(255, 0, 255, 0.3) 100%) !important;
+  border: 2px solid rgba(0, 255, 255, 0.5) !important;
+  border-radius: 20px !important;
+  color: #fff !important;
+  font-weight: 600;
+  padding: 12px 24px !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.3),
+    0 8px 25px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:deep(.el-empty .el-button--primary:hover) {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 
+    0 0 30px rgba(0, 255, 255, 0.5),
+    0 12px 35px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 0, 255, 0.8) !important;
 }
 
 @media (max-width: 768px) {
@@ -465,6 +572,197 @@ const handleUserCommand = async (command: string) => {
   
   .el-button-group {
     white-space: nowrap;
+  }
+  /* 角色卡片样式 - 参考聊天界面设计 */
+  .role-card {
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    min-height: 280px;
+  }
+
+  .role-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.12) 50%,
+      rgba(255, 255, 255, 0.08) 100%
+    );
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 
+      0 20px 60px rgba(0, 0, 0, 0.25),
+      0 0 40px rgba(102, 126, 234, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  /* 角色卡片发光效果 */
+  .role-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s ease;
+  }
+
+  .role-card:hover::before {
+    left: 100%;
+  }
+
+  /* 角色头像容器 */
+  .role-avatar {
+    position: relative;
+    margin-bottom: 8px;
+  }
+
+  /* Element Plus 头像样式覆盖 */
+  .role-card :deep(.el-avatar) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 
+      0 8px 25px rgba(102, 126, 234, 0.4),
+      inset 0 2px 0 rgba(255, 255, 255, 0.2);
+    font-size: 32px !important;
+    font-weight: 700;
+    color: #fff !important;
+    transition: all 0.3s ease;
+  }
+
+  .role-card:hover :deep(.el-avatar) {
+    transform: scale(1.1);
+    box-shadow: 
+      0 12px 35px rgba(102, 126, 234, 0.6),
+      inset 0 2px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  /* 角色信息区域 */
+  .role-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .role-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+  }
+
+  .role-description {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.5;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    font-weight: 400;
+    max-height: 63px;
+  }
+
+  .role-category {
+    margin-top: 4px;
+  }
+
+  /* Element Plus 标签样式覆盖 */
+  .role-card :deep(.el-tag) {
+    background: rgba(102, 126, 234, 0.2) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid rgba(102, 126, 234, 0.4) !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    padding: 4px 12px !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  }
+
+  /* 角色操作按钮 */
+  .role-actions {
+    width: 100%;
+    margin-top: auto;
+  }
+
+  .role-actions :deep(.el-button) {
+    width: 100% !important;
+    background: linear-gradient(135deg, 
+      rgba(102, 126, 234, 0.3) 0%, 
+      rgba(118, 75, 162, 0.3) 100%) !important;
+    border: 2px solid rgba(102, 126, 234, 0.5) !important;
+    border-radius: 16px !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    padding: 12px 24px !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 
+      0 4px 15px rgba(102, 126, 234, 0.3),
+      0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .role-actions :deep(.el-button::before) {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+      transparent, 
+      rgba(255, 255, 255, 0.2), 
+      transparent
+    );
+    transition: left 0.5s;
+  }
+
+  .role-actions :deep(.el-button:hover) {
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: 
+      0 8px 25px rgba(102, 126, 234, 0.5),
+      0 4px 15px rgba(0, 0, 0, 0.3) !important;
+    border-color: rgba(118, 75, 162, 0.8) !important;
+    background: linear-gradient(135deg, 
+      rgba(102, 126, 234, 0.4) 0%, 
+      rgba(118, 75, 162, 0.4) 100%) !important;
+  }
+
+  .role-actions :deep(.el-button:hover::before) {
+    left: 100%;
   }
 }
 </style>
