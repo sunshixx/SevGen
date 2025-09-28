@@ -513,8 +513,8 @@ const processVoiceInput = async (audioBlob: Blob) => {
       // 自动滚动到底部
       scrollToBottom()
       
-      // 移除 loadMessages 调用，避免语音消息同步显示问题
-      // await loadMessages(activeChatId.value)
+      // 重新加载消息以获取包含转录文本的完整消息数据
+      await loadMessages(activeChatId.value)
       
     } else {
       console.error('语音处理失败:', response.status)
@@ -897,7 +897,7 @@ const sendMessageToChat = async (chatId: number, content: string) => {
       
       // 立即显示用户消息（临时消息，避免用户看不到自己发的内容）
       const tempUserMessage: Message = {
-        id: Date.now(), // 临时ID
+        id: Date.now() + Math.random(), // 使用更唯一的临时ID
         chatId: chatId,
         content: content,
         senderType: 'user',
@@ -930,11 +930,9 @@ const sendMessageToChat = async (chatId: number, content: string) => {
         try {
           console.log('🔥 [版本4.0] 收到原始SSE数据:', event.data)
           
-          // 手动移除"data: "前缀（如果存在）
+          // EventSource会自动处理SSE格式，event.data已经是纯数据内容
+          // 不需要手动移除"data: "前缀，因为EventSource已经处理了
           let token = event.data.trim()
-          if (token.startsWith('data: ')) {
-            token = token.substring(6) // 移除"data: "前缀
-          }
           
           // 如果数据为空，跳过
           if (!token) {
@@ -946,21 +944,18 @@ const sendMessageToChat = async (chatId: number, content: string) => {
           
           // 处理特殊 token
           if (token === '[DONE]') {
-              // 在刷新数据库消息前，先将流式累积内容保存为一条AI消息
-              if (aiResponse.trim()) {
-                const finalAiMessage: Message = {
-                  id: Date.now() + 2,
-                  chatId: chatId,
-                  content: aiResponse,
-                  senderType: 'ai',
-                  sentAt: new Date().toISOString(),
-                  isRead: false
-                }
+              // SSE流式消息已经完成，不需要重复添加消息
+              // 只需要更新最后一条AI消息的状态为最终状态
+              if (tempAiMessage && aiResponse.trim()) {
+                tempAiMessage.content = aiResponse
                 const currentMessages = allMessages.value.get(chatId) || []
-                allMessages.value.set(chatId, [...currentMessages, finalAiMessage])
+                const updatedMessages = currentMessages.map(msg => 
+                  msg.id === tempAiMessage!.id ? { ...tempAiMessage! } : msg
+                )
+                allMessages.value.set(chatId, updatedMessages)
                 scrollToBottom()
               }
-              // 移除 loadMessages(chatId) 调用，避免重新加载导致消息同步出现
+              
               eventSource.close()
               isAiReplying.value = false
               ElMessage.success('消息发送成功')
@@ -982,7 +977,7 @@ const sendMessageToChat = async (chatId: number, content: string) => {
                 
                 if (!tempAiMessage) {
                   tempAiMessage = {
-                    id: Date.now() + 1,
+                    id: Date.now() + Math.random() + 1000, // 使用更唯一的AI消息ID
                     chatId: chatId,
                     content: aiResponse,
                     senderType: 'ai',
@@ -1289,10 +1284,35 @@ const loadMessages = async (chatId: number) => {
     const response = await messageAPI.getChatMessages(chatId, undefined, 100)  // 获取前100条消息
     if (response.success && response.data) {
       const messages = response.data.data || []  // 从分页响应中取出消息数组
-      allMessages.value.set(chatId, messages)
+      
+      // 获取当前已存在的消息（可能包含临时消息）
+      const existingMessages = allMessages.value.get(chatId) || []
+      
+      // 消息去重逻辑：合并数据库消息和临时消息，避免重复
+      const mergedMessages = [...messages] // 先添加数据库中的消息
+      
+      // 检查是否有临时消息需要保留（通常是正在进行的对话）
+      existingMessages.forEach(existingMsg => {
+        // 如果是临时消息（ID为时间戳格式），且在数据库消息中找不到相同内容的消息
+        if (existingMsg.id && existingMsg.id.toString().includes('.')) { // 临时ID包含小数点
+          const hasSimilar = messages.some(dbMsg => 
+            dbMsg.content === existingMsg.content && 
+            dbMsg.senderType === existingMsg.senderType &&
+            Math.abs(new Date(dbMsg.sentAt).getTime() - new Date(existingMsg.sentAt).getTime()) < 60000 // 1分钟内
+          )
+          if (!hasSimilar) {
+            mergedMessages.push(existingMsg) // 保留临时消息
+          }
+        }
+      })
+      
+      // 按时间排序
+      mergedMessages.sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime())
+      
+      allMessages.value.set(chatId, mergedMessages)
       
       // 预加载语音消息的音频元数据
-      messages.forEach((message: Message) => {
+      mergedMessages.forEach((message: Message) => {
         if (message.messageType === 'voice' && message.audioUrl) {
           preloadVoiceMessage(message.id, message.audioUrl, message.audioDuration || 0)
         }
