@@ -513,8 +513,10 @@ const processVoiceInput = async (audioBlob: Blob) => {
       // 自动滚动到底部
       scrollToBottom()
       
+
       // 重新加载消息以获取包含转录文本的完整消息数据
       await loadMessages(activeChatId.value)
+
       
     } else {
       console.error('语音处理失败:', response.status)
@@ -955,7 +957,7 @@ const sendMessageToChat = async (chatId: number, content: string) => {
                 allMessages.value.set(chatId, updatedMessages)
                 scrollToBottom()
               }
-              
+
               eventSource.close()
               isAiReplying.value = false
               ElMessage.success('消息发送成功')
