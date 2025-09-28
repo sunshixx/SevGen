@@ -67,7 +67,7 @@ export const chatroomAPI = {
 
   // 删除聊天室
   deleteChatroom(chatRoomId: string | number): Promise<ApiResponse<void>> {
-    return request.delete(`/chatrooms/${chatRoomId}`)
+    return request.delete(`/chatrooms/room/${chatRoomId}`)
   },
 
   // 发送协作消息 (使用SSE)

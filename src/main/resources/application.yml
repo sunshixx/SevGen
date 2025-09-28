@@ -4,6 +4,12 @@ server:
 
 # 数据库配置
 spring:
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB      # 单个文件最大大小
+      max-request-size: 10MB   # 整个请求最大大小
+      enabled: true
   datasource:
     url: jdbc:mysql://localhost:3306/qiniuyun?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
@@ -66,6 +72,12 @@ file:
   storage:
     upload-url: ${FILE_UPLOAD_URL:http://111.62.241.115/upload.php}  # 远程上传接口
     base-url: ${FILE_STORAGE_URL:http://111.62.241.115}   # 远程访问地址
+
+# 头像上传配置
+app:
+  upload:
+    avatar-dir: ${AVATAR_UPLOAD_DIR:frontend/public/avatars}
+    avatar-url-prefix: ${AVATAR_URL_PREFIX:http://localhost:5173/avatars}
 
 # 日志配置
 logging:

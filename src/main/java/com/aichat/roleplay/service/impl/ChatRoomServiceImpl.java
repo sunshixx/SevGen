@@ -177,6 +177,47 @@ public class ChatRoomServiceImpl extends ServiceImpl<ChatRoomMapper, ChatRoom> i
     }
 
     @Override
+    @Transactional
+    public boolean deleteChatRoom(Long chatRoomId, Long userId) {
+        log.info("物理删除聊天室: {}, 用户ID: {}", chatRoomId, userId);
+        
+        try {
+            // 1. 权限验证：检查用户是否有权限删除该聊天室
+            if (!hasPermission(chatRoomId, userId)) {
+                log.error("用户 {} 没有权限删除聊天室 {}", userId, chatRoomId);
+                return false;
+            }
+            
+            // 2. 物理删除聊天室相关的所有消息
+            List<ChatroomMessage> messages = chatroomMessageMapper.findByChatRoomId(chatRoomId);
+            if (!messages.isEmpty()) {
+                // 物理删除消息记录
+                for (ChatroomMessage message : messages) {
+                    chatroomMessageMapper.deleteById(message.getId());
+                }
+                log.info("物理删除聊天室 {} 的 {} 条消息", chatRoomId, messages.size());
+            }
+            
+            // 3. 物理删除聊天室中的所有角色记录
+            List<ChatRoom> chatRoomRoles = chatRoomMapper.findByChatRoomId(chatRoomId);
+            if (!chatRoomRoles.isEmpty()) {
+                // 物理删除聊天室角色记录
+                for (ChatRoom chatRoomRole : chatRoomRoles) {
+                    chatRoomMapper.deleteById(chatRoomRole.getId());
+                }
+                log.info("物理删除聊天室 {} 的 {} 个角色记录", chatRoomId, chatRoomRoles.size());
+            }
+            
+            log.info("聊天室 {} 物理删除成功", chatRoomId);
+            return true;
+            
+        } catch (Exception e) {
+            log.error("物理删除聊天室失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    @Override
     public ChatRoom getChatRoomByRoomIdAndRoleId(Long chatRoomId, Long roleId) {
         log.debug("查询聊天室 {} 中的角色 {}", chatRoomId, roleId);
         return chatRoomMapper.findByChatRoomIdAndRoleId(chatRoomId, roleId);

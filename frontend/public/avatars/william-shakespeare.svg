@@ -1,0 +1,31 @@
+<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆 -->
+  <circle cx="40" cy="40" r="40" fill="#f5f5dc"/>
+  
+  <!-- 头部 -->
+  <circle cx="40" cy="35" r="18" fill="#fdbcb4"/>
+  
+  <!-- 胡须和小胡子 -->
+  <ellipse cx="40" cy="48" rx="8" ry="5" fill="#8b4513"/>
+  <ellipse cx="40" cy="41" rx="4" ry="2" fill="#8b4513"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="35" cy="32" r="2" fill="#333"/>
+  <circle cx="45" cy="32" r="2" fill="#333"/>
+  
+  <!-- 鼻子 -->
+  <ellipse cx="40" cy="37" rx="1.5" ry="2.5" fill="#f4a460"/>
+  
+  <!-- 嘴巴 -->
+  <path d="M 37 43 Q 40 45 43 43" stroke="#333" stroke-width="1" fill="none"/>
+  
+  <!-- 头发（秃顶特征） -->
+  <path d="M 28 30 Q 32 22 40 24 Q 48 22 52 30 Q 50 26 45 26 Q 35 26 28 30" fill="#8b4513"/>
+  
+  <!-- 伊丽莎白时代的衣领 -->
+  <ellipse cx="40" cy="58" rx="20" ry="8" fill="white" stroke="#ddd" stroke-width="1"/>
+  <rect x="25" y="60" width="30" height="20" fill="#2f4f4f" rx="3"/>
+  
+  <!-- 文字标识 -->
+  <text x="40" y="72" text-anchor="middle" font-family="serif" font-size="7" fill="white">莎</text>
+</svg>

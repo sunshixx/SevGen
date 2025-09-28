@@ -40,26 +40,38 @@
             v-for="chatroom in chatrooms" 
             :key="chatroom.id"
             class="chatroom-card"
-            @click="enterChatroom(chatroom)"
           >
-            <div class="card-header">
-              <h3 class="chatroom-name">{{ chatroom.name || chatroom.title || '未命名聊天室' }}</h3>
-              <el-tag 
-                :type="chatroom.isActive ? 'success' : 'info'"
-                size="small"
-              >
-                {{ chatroom.isActive ? '活跃' : '空闲' }}
-              </el-tag>
+            <div class="card-content" @click="enterChatroom(chatroom)">
+              <div class="card-header">
+                <h3 class="chatroom-name">{{ chatroom.name || chatroom.title || '未命名聊天室' }}</h3>
+                <el-tag 
+                  :type="chatroom.isActive ? 'success' : 'info'"
+                  size="small"
+                >
+                  {{ chatroom.isActive ? '活跃' : '空闲' }}
+                </el-tag>
+              </div>
+              <p class="chatroom-description">{{ chatroom.description || '暂无描述' }}</p>
+              <div class="card-footer">
+                <div class="participants">
+                  <el-icon><User /></el-icon>
+                  <span>{{ chatroom.participantCount || 0 }} 人参与</span>
+                </div>
+                <div class="create-time">
+                  创建于 {{ formatTime(chatroom.createTime) }}
+                </div>
+              </div>
             </div>
-            <p class="chatroom-description">{{ chatroom.description || '暂无描述' }}</p>
-            <div class="card-footer">
-              <div class="participants">
-                <el-icon><User /></el-icon>
-                <span>{{ chatroom.participantCount || 0 }} 人参与</span>
-              </div>
-              <div class="create-time">
-                创建于 {{ formatTime(chatroom.createTime) }}
-              </div>
+            <div class="card-actions" @click.stop>
+              <el-button
+                type="danger"
+                size="small"
+                :icon="Delete"
+                @click="confirmDeleteChatroom(chatroom)"
+                title="删除聊天室"
+              >
+                删除
+              </el-button>
             </div>
           </div>
         </div>
@@ -142,7 +154,8 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { 
   ArrowLeft, 
   Plus, 
-  User 
+  User,
+  Delete
 } from '@element-plus/icons-vue'
 import { chatroomAPI } from '@/api'
 import type { ChatRoom, CreateChatroomRequest } from '@/types'
@@ -202,6 +215,49 @@ const fetchChatrooms = async () => {
 // 进入聊天室
 const enterChatroom = (chatroom: ChatRoom) => {
   router.push(`/chatroom/${chatroom.chatRoomId}`)
+}
+
+// 确认删除聊天室
+const confirmDeleteChatroom = async (chatroom: ChatRoom) => {
+  console.log('点击删除按钮，聊天室:', chatroom)
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除聊天室 "${chatroom.name || chatroom.title || '未命名聊天室'}" 吗？此操作不可恢复。`,
+      '删除聊天室',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+    
+    await deleteChatroom(chatroom)
+  } catch (error) {
+    console.log('用户取消删除或发生错误:', error)
+    // 用户取消删除，不需要处理
+  }
+}
+
+// 删除聊天室
+const deleteChatroom = async (chatroom: ChatRoom) => {
+  try {
+    console.log('开始删除聊天室:', chatroom.chatRoomId)
+    const response = await chatroomAPI.deleteChatroom(chatroom.chatRoomId)
+    console.log('删除响应:', response)
+    
+    if (response && response.success) {
+      // 从列表中移除已删除的聊天室
+      chatrooms.value = chatrooms.value.filter(room => room.chatRoomId !== chatroom.chatRoomId)
+      ElMessage.success('聊天室删除成功')
+    } else {
+      console.error('删除失败，响应:', response)
+      ElMessage.error('删除聊天室失败')
+    }
+  } catch (error) {
+    console.error('删除聊天室失败:', error)
+    ElMessage.error('删除聊天室失败')
+  }
 }
 
 // 创建聊天室
@@ -404,7 +460,6 @@ const formatTime = (timeStr?: string) => {
 }
 
 .loading-section {
-
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
@@ -412,7 +467,10 @@ const formatTime = (timeStr?: string) => {
   padding: 40px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
+}
 
+.chatroom-list {
+  display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 32px;
 }
@@ -422,13 +480,29 @@ const formatTime = (timeStr?: string) => {
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
   border-radius: 24px;
-  padding: 32px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  cursor: pointer;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
   transform-style: preserve-3d;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-content {
+  padding: 32px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.card-actions {
+  padding: 16px 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(255, 255, 255, 0.05);
+  position: relative;
+  z-index: 10;
 }
 
 /* 卡片悬浮和倾斜效果 */
@@ -450,6 +524,8 @@ const formatTime = (timeStr?: string) => {
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   transition: left 0.6s ease;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .chatroom-card:hover::before {
@@ -474,6 +550,8 @@ const formatTime = (timeStr?: string) => {
   mask-composite: exclude;
   opacity: 0;
   transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .chatroom-card:hover::after {
@@ -639,6 +717,23 @@ const formatTime = (timeStr?: string) => {
 :deep(.el-form-item__label) {
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
+}
+
+:deep(.el-button--danger) {
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.3) 0%, rgba(255, 59, 48, 0.2) 100%);
+  border: 1px solid rgba(255, 59, 48, 0.5);
+  border-radius: 12px;
+  font-weight: 600;
+  color: #fff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+:deep(.el-button--danger:hover) {
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.5) 0%, rgba(255, 59, 48, 0.3) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 59, 48, 0.3);
 }
 
 :deep(.el-input__wrapper) {

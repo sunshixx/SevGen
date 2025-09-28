@@ -2,8 +2,8 @@
   <div class="login-container">
     <div class="login-card">
       <div class="logo-section">
-        <img src="/robot-logo.svg" alt="Agent广场" class="logo-image">
-        <h1 class="app-title">Agent广场</h1>
+        <img src="/robot-logo.svg" alt="SevGen" class="logo-image">
+      <h1 class="app-title">SevGen</h1>
         <p class="app-subtitle">与AI角色开启精彩对话</p>
       </div>
       

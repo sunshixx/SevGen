@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
 
@@ -183,6 +184,51 @@ public class AuthController {
         } catch (Exception e) {
             log.error("用户注册异常", e);
             return ApiResponse.error("用户注册失败，请稍后重试");
+        }
+    }
+
+    /**
+     * 更新用户头像
+     */
+    @PostMapping("/avatar")
+    public ApiResponse<?> updateAvatar(@RequestParam("avatar") MultipartFile file) {
+        log.info("收到用户头像更新请求");
+
+        try {
+            User currentUser = UserContext.getCurrentUser();
+            if (currentUser == null) {
+                log.warn("更新头像失败：用户未登录");
+                return ApiResponse.error(401, "用户未登录");
+            }
+
+            // 验证文件
+            if (file.isEmpty()) {
+                return ApiResponse.badRequest("请选择要上传的文件");
+            }
+
+            // 验证文件类型
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return ApiResponse.badRequest("只支持图片文件");
+            }
+
+            // 验证文件大小 (5MB)
+            if (file.getSize() > 5 * 1024 * 1024) {
+                return ApiResponse.badRequest("文件大小不能超过5MB");
+            }
+
+            // 更新头像
+            String avatarUrl = userService.updateUserAvatar(currentUser.getId(), file);
+            
+            // 更新当前用户信息
+            currentUser.setAvatar(avatarUrl);
+            
+            log.info("用户头像更新成功，用户ID: {}, 头像URL: {}", currentUser.getId(), avatarUrl);
+            return ApiResponse.success("头像更新成功", avatarUrl);
+
+        } catch (Exception e) {
+            log.error("用户头像更新异常", e);
+            return ApiResponse.error("头像更新失败，请稍后重试");
         }
     }
 

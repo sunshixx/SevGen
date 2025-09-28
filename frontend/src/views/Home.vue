@@ -4,8 +4,8 @@
     <header class="header">
       <div class="header-content">
         <div class="logo">
-          <img src="/robot-logo.svg" alt="Agent广场" class="logo-image">
-          <h1>Agent广场</h1>
+          <img src="/robot-logo.svg" alt="SevGen" class="logo-image">
+        <h1>SevGen</h1>
         </div>
         
         <div class="search-section">
@@ -109,7 +109,7 @@
             @click="startChat(role)"
           >
             <div class="role-avatar">
-              <el-avatar :size="80" :src="role.avatar">
+              <el-avatar :size="80" :src="role.avatar" fit="cover">
                 {{ role.name[0] }}
               </el-avatar>
             </div>

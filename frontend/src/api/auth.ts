@@ -38,5 +38,16 @@ export const authAPI = {
   // 健康检查
   health: (): Promise<ApiResponse> => {
     return request.get('/auth/health')
+  },
+
+  // 更新用户头像
+  updateAvatar: (file: File): Promise<ApiResponse<string>> => {
+    const formData = new FormData()
+    formData.append('avatar', file)
+    return request.post('/auth/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
   }
 }

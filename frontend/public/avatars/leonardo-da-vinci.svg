@@ -1,0 +1,32 @@
+<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆 -->
+  <circle cx="40" cy="40" r="40" fill="#faf0e6"/>
+  
+  <!-- 头部 -->
+  <circle cx="40" cy="35" r="18" fill="#fdbcb4"/>
+  
+  <!-- 长胡须 -->
+  <ellipse cx="40" cy="50" rx="12" ry="10" fill="#d3d3d3"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="35" cy="32" r="2" fill="#333"/>
+  <circle cx="45" cy="32" r="2" fill="#333"/>
+  
+  <!-- 鼻子 -->
+  <ellipse cx="40" cy="37" rx="1.5" ry="2.5" fill="#f4a460"/>
+  
+  <!-- 嘴巴 -->
+  <path d="M 36 42 Q 40 44 44 42" stroke="#333" stroke-width="1" fill="none"/>
+  
+  <!-- 长发 -->
+  <path d="M 22 30 Q 25 18 40 20 Q 55 18 58 30 Q 55 25 50 26 Q 30 26 22 30" fill="#d3d3d3"/>
+  <path d="M 22 30 Q 20 40 25 50 Q 30 45 35 48" fill="#d3d3d3"/>
+  <path d="M 58 30 Q 60 40 55 50 Q 50 45 45 48" fill="#d3d3d3"/>
+  
+  <!-- 文艺复兴服装 -->
+  <rect x="25" y="55" width="30" height="25" fill="#8b4513" rx="5"/>
+  <rect x="28" y="58" width="24" height="19" fill="#daa520" rx="3"/>
+  
+  <!-- 文字标识 -->
+  <text x="40" y="72" text-anchor="middle" font-family="serif" font-size="7" fill="#8b4513">达</text>
+</svg>
