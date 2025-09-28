@@ -124,10 +124,15 @@
             </div>
             
             <div class="role-avatar-container">
-              <div class="role-avatar">
-                <div class="status-indicator online"></div>
-                {{ role.name.charAt(0) }}
-              </div>
+              <el-avatar 
+                :size="60" 
+                :src="getRoleAvatar(role)"
+                :style="{ backgroundColor: getRoleAvatar(role) ? 'transparent' : '#409EFF' }"
+                @error="handleAvatarError"
+              >
+                <span>{{ role.name.charAt(0) }}</span>
+              </el-avatar>
+              <div class="status-indicator online"></div>
             </div>
             
             <div class="role-info">
@@ -184,9 +189,14 @@
           <div v-for="message in messages" :key="message.id" class="message-wrapper" :class="{ 'user-message': message.type === 'user', 'ai-message': message.type === 'ai' }">
             <div class="message-bubble">
               <div class="message-avatar">
-                <div class="avatar-bg">
+                <el-avatar 
+                  :size="32"
+                  :src="message.type === 'user' ? '' : getRoleAvatar(getRoleById(message.roleId))"
+                  :style="{ backgroundColor: message.type === 'user' ? '#409EFF' : (getRoleAvatar(getRoleById(message.roleId)) ? 'transparent' : '#67C23A') }"
+                  @error="handleAvatarError"
+                >
                   <span>{{ message.senderName?.charAt(0) || 'U' }}</span>
-                </div>
+                </el-avatar>
                 <div class="avatar-status" :class="{ 'online': message.type === 'ai' }"></div>
               </div>
               
@@ -196,7 +206,15 @@
                   <span class="message-time">{{ formatTime(message.timestamp) }}</span>
                 </div>
                 <div class="message-text">
-                  <div class="text-content">{{ message.content }}</div>
+                  <div 
+                    class="text-content" 
+                    v-if="message.type === 'ai'"
+                    v-html="renderMarkdown(message.content)"
+                  ></div>
+                  <div 
+                    class="text-content" 
+                    v-else
+                  >{{ message.content }}</div>
                   <div class="message-actions">
                     <el-button 
                       size="small" 
@@ -220,9 +238,12 @@
           <!-- AI思考中指示器 -->
           <div v-if="isThinking" class="thinking-indicator">
             <div class="thinking-avatar">
-              <div class="avatar-bg ai">
+              <el-avatar 
+                :size="32"
+                style="background-color: #67C23A;"
+              >
                 <span>🤖</span>
-              </div>
+              </el-avatar>
               <div class="thinking-animation">
                 <div class="thinking-dot"></div>
                 <div class="thinking-dot"></div>
@@ -286,6 +307,14 @@
     >
       <div class="role-selector-content">
         <div v-for="role in availableRoles" :key="role.id" class="available-role-item">
+          <el-avatar 
+            :size="40" 
+            :src="getRoleAvatar(role)"
+            :style="{ backgroundColor: getRoleAvatar(role) ? 'transparent' : '#409EFF' }"
+            @error="handleAvatarError"
+          >
+            <span>{{ role.name.charAt(0) }}</span>
+          </el-avatar>
           <div class="role-info">
             <div class="role-name">{{ role.name }}</div>
             <div class="role-description">{{ role.description }}</div>
@@ -311,9 +340,13 @@ import { ArrowLeft, Plus, Close, MoreFilled, Position, Delete, Download } from '
 import { chatroomAPI } from '@/api/chatroom'
 import { roleAPI } from '@/api/role'
 import { messageAPI } from '@/api/message'
+import { useAuthStore } from '@/stores/auth'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 
 // 响应式数据
 const chatroomInfo = ref(null)
@@ -325,10 +358,11 @@ const showRoleSelector = ref(false)
 const messagesContainer = ref(null)
 
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
   loadChatroomInfo()
   loadAvailableRoles()
-  loadChatroomRoles()
+  // 先加载聊天室角色，再加载消息，确保角色信息可用
+  await loadChatroomRoles()
   loadChatroomMessages()
 })
 
@@ -389,11 +423,70 @@ const loadChatroomMessages = async () => {
   try {
     const response = await chatroomAPI.getChatroomMessages(route.params.id)
     if (response.success) {
-      messages.value = response.data.data || []
+      const rawMessages = response.data.data || []
+      // 处理历史消息，确保消息类型正确
+      messages.value = await Promise.all(rawMessages.map(async message => {
+        // 判断消息类型：如果有roleId且不为空，则为AI消息；否则为用户消息
+        const messageType = message.roleId ? 'ai' : 'user'
+        
+        // 获取AI角色信息
+        let senderName = message.senderName
+        if (messageType === 'ai' && message.roleId) {
+          // 先尝试从selectedRoles中获取
+          let role = getRoleById(message.roleId)
+          
+          // 如果selectedRoles中没有，直接从API获取
+          if (!role) {
+            try {
+              const roleResponse = await roleAPI.getRoleById(message.roleId)
+              if (roleResponse.success && roleResponse.data) {
+                role = roleResponse.data
+              }
+            } catch (error) {
+              console.error('获取角色信息失败:', error)
+            }
+          }
+          
+          senderName = role ? role.name : (message.senderName || 'AI')
+        } else if (messageType === 'user') {
+          senderName = message.senderName || authStore.userInfo?.username || '我'
+        }
+        
+        return {
+          ...message,
+          type: messageType,
+          // 确保时间字段正确映射
+          timestamp: message.timestamp || message.createTime || new Date(),
+          // 确保发送者名称正确显示
+          senderName: senderName
+        }
+      }))
     }
   } catch (error) {
     console.error('加载消息失败:', error)
   }
+}
+
+// 获取角色头像
+const getRoleAvatar = (role) => {
+  if (!role || !role.avatar) {
+    return '' // 如果没有头像，返回空字符串，让el-avatar显示文字
+  }
+  return role.avatar
+}
+
+// 头像加载错误处理
+const handleAvatarError = (event) => {
+  const target = event.target
+  if (target) {
+    console.log('头像加载失败:', target.src)
+    target.src = '' // 清空src，让el-avatar显示文字
+  }
+}
+
+// 根据角色ID获取角色信息
+const getRoleById = (roleId) => {
+  return selectedRoles.value.find(role => role.id === roleId) || null
 }
 
 const getParticleStyle = (index) => {
@@ -459,7 +552,7 @@ const handleSendMessage = async () => {
   const userMessage = {
     id: Date.now() + Math.random(),
     type: 'user',
-    senderName: '我',
+    senderName: authStore.userInfo?.username || '我',
     content: messageContent,
     timestamp: new Date()
   }
@@ -518,14 +611,8 @@ const handleSendMessage = async () => {
         if (data) {
           switch (data.type) {
             case 'USER_MESSAGE':
-              // 添加用户消息
-              messages.value.push({
-                id: data.messageId,
-                type: 'user',
-                senderName: '我',
-                content: data.content,
-                timestamp: new Date(data.timestamp)
-              })
+              // 用户消息已经在发送时添加，这里不需要重复添加
+              console.log('用户消息确认:', data.content)
               break
               
             case 'START':
@@ -659,6 +746,21 @@ const formatTime = (timestamp) => {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+// Markdown渲染函数
+const renderMarkdown = (content) => {
+  if (!content) return ''
+  
+  // 配置marked选项
+  marked.setOptions({
+    breaks: true, // 支持换行
+    gfm: true,    // 支持GitHub风格的Markdown
+  })
+  
+  // 渲染markdown并清理HTML
+  const rawHtml = marked(content)
+  return DOMPurify.sanitize(rawHtml)
 }
 </script>
 
@@ -1161,10 +1263,12 @@ const formatTime = (timestamp) => {
 }
 
 .role-tag.active {
-  background: rgba(76, 175, 80, 0.2);
-  color: #4CAF50;
-  border-color: rgba(76, 175, 80, 0.4);
-  box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+  background: rgba(75, 85, 99, 0.8);
+  color: #10b981;
+  border-color: rgba(75, 85, 99, 0.9);
+  box-shadow: 0 0 20px rgba(75, 85, 99, 0.5);
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .role-actions {
@@ -1511,6 +1615,100 @@ const formatTime = (timestamp) => {
   line-height: 1.5;
   word-wrap: break-word;
   white-space: pre-wrap;
+}
+
+/* Markdown样式 */
+.text-content h1, .text-content h2, .text-content h3, 
+.text-content h4, .text-content h5, .text-content h6 {
+  color: #fff;
+  margin: 16px 0 8px 0;
+  font-weight: 600;
+}
+
+.text-content h1 { font-size: 1.5em; }
+.text-content h2 { font-size: 1.3em; }
+.text-content h3 { font-size: 1.1em; }
+
+.text-content p {
+  margin: 8px 0;
+}
+
+.text-content code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+  color: #ffd700;
+}
+
+.text-content pre {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+  border-left: 4px solid #409EFF;
+}
+
+.text-content pre code {
+  background: none;
+  padding: 0;
+  color: #e6e6e6;
+}
+
+.text-content blockquote {
+  border-left: 4px solid #409EFF;
+  padding-left: 12px;
+  margin: 12px 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
+}
+
+.text-content ul, .text-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.text-content li {
+  margin: 4px 0;
+}
+
+.text-content strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.text-content em {
+  color: rgba(255, 255, 255, 0.9);
+  font-style: italic;
+}
+
+.text-content a {
+  color: #409EFF;
+  text-decoration: none;
+}
+
+.text-content a:hover {
+  text-decoration: underline;
+}
+
+.text-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+}
+
+.text-content th, .text-content td {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.text-content th {
+  background: rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+  color: #fff;
 }
 
 .message-actions {

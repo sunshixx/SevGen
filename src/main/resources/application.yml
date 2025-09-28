@@ -44,7 +44,7 @@ langchain4j:
     chat-model:
       base-url: https://openai.qiniu.com/v1
       api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
-      model-name: nvidia/nvidia-nemotron-nano-9b-v2
+      model-name: deepseek-v3-0324
       max-tokens: 4096
       temperature: 0.5
     
