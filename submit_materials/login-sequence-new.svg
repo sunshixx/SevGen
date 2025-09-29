@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="350" viewBox="0 0 800 350" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#666"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="350" fill="#f8f9fa" stroke="#ddd" stroke-width="1"/>
+  
+  <!-- Title -->
+  <text x="400" y="25" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold" fill="#1565c0">登录鉴权流程</text>
+  
+  <!-- Swimlanes -->
+  <rect x="50" y="50" width="120" height="250" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="5"/>
+  <text x="110" y="70" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1976d2">User</text>
+  <line x1="110" y1="80" x2="110" y2="280" stroke="#ccc" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <rect x="200" y="50" width="120" height="250" fill="#e8f5e9" stroke="#388e3c" stroke-width="1" rx="5"/>
+  <text x="260" y="70" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#388e3c">Frontend</text>
+  <line x1="260" y1="80" x2="260" y2="280" stroke="#ccc" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <rect x="350" y="50" width="120" height="250" fill="#fff3e0" stroke="#f57c00" stroke-width="1" rx="5"/>
+  <text x="410" y="70" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#f57c00">Backend</text>
+  <line x1="410" y1="80" x2="410" y2="280" stroke="#ccc" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <rect x="500" y="50" width="120" height="250" fill="#fce4ec" stroke="#e91e63" stroke-width="1" rx="5"/>
+  <text x="560" y="70" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#e91e63">Database</text>
+  <line x1="560" y1="80" x2="560" y2="280" stroke="#ccc" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Flow Steps -->
+  <!-- Step 1: User to Frontend -->
+  <path d="M 130 100 L 240 100" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="185" y="95" text-anchor="middle" font-family="Arial" font-size="10" fill="#333">输入账密</text>
+
+  <!-- Step 2: Frontend to Backend -->
+  <path d="M 280 130 L 390 130" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="335" y="125" text-anchor="middle" font-family="Arial" font-size="10" fill="#333">POST /login</text>
+
+  <!-- Step 3: Backend to Database -->
+  <path d="M 430 160 L 540 160" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="485" y="155" text-anchor="middle" font-family="Arial" font-size="10" fill="#333">验证用户</text>
+
+  <!-- Step 4: Database to Backend -->
+  <path d="M 540 190 L 430 190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="485" y="185" text-anchor="middle" font-family="Arial" font-size="10" fill="#333">用户数据</text>
+
+  <!-- Step 5: Backend processing -->
+  <rect x="370" y="210" width="80" height="20" fill="#fff8e1" stroke="#f9a825" rx="3"/>
+  <text x="410" y="223" text-anchor="middle" font-family="Arial" font-size="9" fill="#333">生成JWT</text>
+
+  <!-- Step 6: Backend to Frontend -->
+  <path d="M 390 250 L 280 250" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="335" y="245" text-anchor="middle" font-family="Arial" font-size="10" fill="#333">返回Token</text>
+
+  <!-- Step 7: Frontend to User -->
+  <path d="M 240 280 L 130 280" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="185" y="275" text-anchor="middle" font-family="Arial" font-size="10" fill="#333">登录成功</text>
+
+  <!-- Notes -->
+  <text x="50" y="320" font-family="Arial" font-size="10" fill="#666">• Token存储在localStorage用于后续鉴权</text>
+  <text x="50" y="335" font-family="Arial" font-size="10" fill="#666">• 路由守卫自动检查登录状态</text>
+</svg>

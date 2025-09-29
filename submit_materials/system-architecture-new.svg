@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="400" viewBox="0 0 900 400">
+  <rect width="900" height="400" fill="#ffffff" stroke="#cccccc"/>
+  
+  <text x="450" y="30" text-anchor="middle" font-size="20" fill="#333333">SevGen 系统架构总览</text>
+  
+  <rect x="50" y="60" width="250" height="300" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+  <text x="175" y="85" text-anchor="middle" font-size="16" fill="#1976d2">Frontend</text>
+  <text x="175" y="105" text-anchor="middle" font-size="12" fill="#666666">Vue 3 + TypeScript</text>
+  
+  <rect x="70" y="120" width="210" height="25" fill="#ffffff" stroke="#1976d2"/>
+  <text x="175" y="137" text-anchor="middle" font-size="11" fill="#333333">Views &amp; Components</text>
+  
+  <rect x="70" y="150" width="210" height="25" fill="#ffffff" stroke="#1976d2"/>
+  <text x="175" y="167" text-anchor="middle" font-size="11" fill="#333333">Pinia State Management</text>
+  
+  <rect x="70" y="180" width="210" height="25" fill="#ffffff" stroke="#1976d2"/>
+  <text x="175" y="197" text-anchor="middle" font-size="11" fill="#333333">API Layer</text>
+  
+  <rect x="70" y="210" width="210" height="25" fill="#ffffff" stroke="#1976d2"/>
+  <text x="175" y="227" text-anchor="middle" font-size="11" fill="#333333">Utils &amp; Router</text>
+  
+  <text x="70" y="255" font-size="10" fill="#666666">• Chat.vue / ChatRoom.vue</text>
+  <text x="70" y="270" font-size="10" fill="#666666">• SSE 流式响应处理</text>
+  <text x="70" y="285" font-size="10" fill="#666666">• Markdown 渲染</text>
+  
+  <rect x="325" y="60" width="250" height="300" fill="#e8f5e9" stroke="#388e3c" stroke-width="2"/>
+  <text x="450" y="85" text-anchor="middle" font-size="16" fill="#388e3c">Backend</text>
+  <text x="450" y="105" text-anchor="middle" font-size="12" fill="#666666">Spring Boot + Java 17</text>
+  
+  <rect x="345" y="120" width="210" height="25" fill="#ffffff" stroke="#388e3c"/>
+  <text x="450" y="137" text-anchor="middle" font-size="11" fill="#333333">Controllers</text>
+  
+  <rect x="345" y="150" width="210" height="25" fill="#ffffff" stroke="#388e3c"/>
+  <text x="450" y="167" text-anchor="middle" font-size="11" fill="#333333">Services</text>
+  
+  <rect x="345" y="180" width="210" height="25" fill="#ffffff" stroke="#388e3c"/>
+  <text x="450" y="197" text-anchor="middle" font-size="11" fill="#333333">Repository</text>
+  
+  <rect x="345" y="210" width="210" height="25" fill="#ffffff" stroke="#388e3c"/>
+  <text x="450" y="227" text-anchor="middle" font-size="11" fill="#333333">AI &amp; RAG</text>
+  
+  <text x="345" y="255" font-size="10" fill="#666666">• REST API + SSE</text>
+  <text x="345" y="270" font-size="10" fill="#666666">• 用户管理 &amp; 角色管理</text>
+  <text x="345" y="285" font-size="10" fill="#666666">• MySQL 数据持久化</text>
+  
+  <rect x="600" y="60" width="250" height="300" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+  <text x="725" y="85" text-anchor="middle" font-size="16" fill="#f57c00">Resources</text>
+  <text x="725" y="105" text-anchor="middle" font-size="12" fill="#666666">配置 &amp; 知识库</text>
+  
+  <rect x="620" y="120" width="210" height="25" fill="#ffffff" stroke="#f57c00"/>
+  <text x="725" y="137" text-anchor="middle" font-size="11" fill="#333333">MySQL Database</text>
+  
+  <rect x="620" y="150" width="210" height="25" fill="#ffffff" stroke="#f57c00"/>
+  <text x="725" y="167" text-anchor="middle" font-size="11" fill="#333333">RAG Documents</text>
+  
+  <rect x="620" y="180" width="210" height="25" fill="#ffffff" stroke="#f57c00"/>
+  <text x="725" y="197" text-anchor="middle" font-size="11" fill="#333333">Prompts</text>
+  
+  <rect x="620" y="210" width="210" height="25" fill="#ffffff" stroke="#f57c00"/>
+  <text x="725" y="227" text-anchor="middle" font-size="11" fill="#333333">Config</text>
+  
+  <text x="620" y="255" font-size="10" fill="#666666">• 12个角色知识库</text>
+  <text x="620" y="270" font-size="10" fill="#666666">• 提示词模板</text>
+  <text x="620" y="285" font-size="10" fill="#666666">• 安全检测配置</text>
+  
+  <line x1="300" y1="220" x2="325" y2="220" stroke="#666666" stroke-width="2"/>
+  <polygon points="325,215 335,220 325,225" fill="#666666"/>
+  <text x="312" y="210" text-anchor="middle" font-size="9" fill="#666666">HTTP</text>
+  <text x="312" y="235" text-anchor="middle" font-size="9" fill="#666666">SSE</text>
+  
+  <line x1="575" y1="220" x2="600" y2="220" stroke="#666666" stroke-width="2"/>
+  <polygon points="600,215 610,220 600,225" fill="#666666"/>
+  <text x="587" y="210" text-anchor="middle" font-size="9" fill="#666666">Data</text>
+  <text x="587" y="235" text-anchor="middle" font-size="9" fill="#666666">Access</text>
+  
+  <text x="450" y="380" text-anchor="middle" font-size="11" fill="#666666">前端 → HTTP/SSE → 后端 → 数据访问 → 资源</text>
+</svg>

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1000" height="600" viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF8E1"/>
+      <stop offset="100%" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.2"/>
+    </filter>
+    <style>
+      .title{font:700 18px 'Segoe UI', Arial; fill:#E65100}
+      .lane{font:600 14px 'Segoe UI', Arial; fill:#37474F}
+      .label{font:500 12px 'Segoe UI', Arial; fill:#263238}
+      .note{font:500 11px 'Segoe UI', Arial; fill:#546E7A}
+      .router{font:600 12px 'Segoe UI', Arial; fill:#FF5722}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="600" fill="url(#bg)"/>
+  <text x="500" y="28" text-anchor="middle" class="title">群聊智能路由流程（ChatRoom Smart Routing）</text>
+
+  <!-- Swimlanes -->
+  <g>
+    <!-- User Lane -->
+    <rect x="50" y="50" width="160" height="500" rx="10" ry="10" fill="#FFFFFF" stroke="#B0BEC5" filter="url(#shadow)"/>
+    <text x="130" y="72" text-anchor="middle" class="lane">User</text>
+    <line x1="130" y1="90" x2="130" y2="530" stroke="#CFD8DC" stroke-width="2" stroke-dasharray="6 6"/>
+
+    <!-- Frontend Lane -->
+    <rect x="240" y="50" width="160" height="500" rx="10" ry="10" fill="#FFFFFF" stroke="#B0BEC5" filter="url(#shadow)"/>
+    <text x="320" y="72" text-anchor="middle" class="lane">Frontend</text>
+    <line x1="320" y1="90" x2="320" y2="530" stroke="#CFD8DC" stroke-width="2" stroke-dasharray="6 6"/>
+
+    <!-- Backend + Smart Router Lane -->
+    <rect x="430" y="50" width="200" height="500" rx="10" ry="10" fill="#FFFFFF" stroke="#B0BEC5" filter="url(#shadow)"/>
+    <text x="530" y="72" text-anchor="middle" class="lane">Backend + Router</text>
+    <line x1="530" y1="90" x2="530" y2="530" stroke="#CFD8DC" stroke-width="2" stroke-dasharray="6 6"/>
+
+    <!-- 角色A Lane (上半部分) -->
+    <rect x="660" y="50" width="150" height="240" rx="10" ry="10" fill="#E8F5E9" stroke="#4CAF50" stroke-width="2" filter="url(#shadow)"/>
+    <text x="735" y="72" text-anchor="middle" class="lane">角色 A</text>
+    <text x="735" y="90" text-anchor="middle" class="note">（已路由）</text>
+    <line x1="735" y1="100" x2="735" y2="280" stroke="#4CAF50" stroke-width="3"/>
+
+    <!-- 角色B Lane (下半部分) -->
+    <rect x="660" y="310" width="150" height="240" rx="10" ry="10" fill="#FFEBEE" stroke="#F44336" stroke-width="2" filter="url(#shadow)" opacity="0.6"/>
+    <text x="735" y="332" text-anchor="middle" class="lane">角色 B</text>
+    <text x="735" y="350" text-anchor="middle" class="note">（未路由）</text>
+    <line x1="735" y1="360" x2="735" y2="540" stroke="#F44336" stroke-width="2" stroke-dasharray="8 4"/>
+  </g>
+
+  <!-- Markers -->
+  <defs>
+    <marker id="blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1976D2"/>
+    </marker>
+    <marker id="green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4CAF50"/>
+    </marker>
+    <marker id="amber" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#FF9800"/>
+    </marker>
+    <marker id="red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#F44336"/>
+    </marker>
+  </defs>
+
+  <!-- Smart Router Box -->
+  <rect x="480" y="110" width="100" height="30" rx="5" fill="#FFECB3" stroke="#FF9800" stroke-width="2"/>
+  <text x="530" y="130" text-anchor="middle" class="router">智能路由</text>
+
+  <!-- Flows -->
+  <g>
+    <!-- Step 1: User to Frontend -->
+    <path d="M130,160 C225,160 225,160 320,160" stroke="#1976D2" stroke-width="2" fill="none" marker-end="url(#blue)"/>
+    <text x="225" y="150" text-anchor="middle" class="label">发送消息到群聊</text>
+
+    <!-- Step 2: Frontend to Backend -->
+    <path d="M320,190 C415,190 415,190 530,190" stroke="#2E7D32" stroke-width="2" fill="none" marker-end="url(#green)"/>
+    <text x="425" y="180" text-anchor="middle" class="label">POST /chatrooms/{id}/messages</text>
+
+    <!-- Step 3: Smart Routing Decision -->
+    <rect x="450" y="210" width="160" height="40" rx="8" fill="#E3F2FD" stroke="#2196F3" stroke-width="1"/>
+    <text x="530" y="225" text-anchor="middle" class="note">智能路由分析：</text>
+    <text x="530" y="240" text-anchor="middle" class="note">消息内容 → 选择角色A</text>
+
+    <!-- Step 4: Route to 角色A (实线 - 已路由) -->
+    <path d="M630,270 C692,270 692,270 735,270" stroke="#4CAF50" stroke-width="3" fill="none" marker-end="url(#green)"/>
+    <text x="682" y="260" text-anchor="middle" class="label">路由到角色A</text>
+    <text x="682" y="285" text-anchor="middle" class="note">提示词 + RAG + 生成</text>
+
+    <!-- Step 5: Not route to 角色B (虚线 - 未路由) -->
+    <path d="M630,380 C692,380 692,380 735,380" stroke="#F44336" stroke-width="2" stroke-dasharray="8 4" fill="none" marker-end="url(#red)"/>
+    <text x="682" y="370" text-anchor="middle" class="label">未路由到角色B</text>
+    <text x="682" y="395" text-anchor="middle" class="note">（智能跳过）</text>
+
+    <!-- Step 6: 角色A Response -->
+    <path d="M735,310 C692,310 692,310 630,310" stroke="#4CAF50" stroke-width="3" fill="none" marker-end="url(#green)"/>
+    <text x="682" y="300" text-anchor="middle" class="label">角色A回复（流式）</text>
+
+    <!-- Step 7: Backend to Frontend -->
+    <path d="M530,430 C415,430 415,430 320,430" stroke="#FF9800" stroke-width="2" fill="none" marker-end="url(#amber)"/>
+    <text x="425" y="420" text-anchor="middle" class="label">SSE 流式推送</text>
+
+    <!-- Step 8: Frontend to User -->
+    <path d="M320,460 C225,460 225,460 130,460" stroke="#1976D2" stroke-width="2" fill="none" marker-end="url(#blue)"/>
+    <text x="225" y="450" text-anchor="middle" class="label">渲染角色A发言</text>
+
+    <!-- Legend -->
+    <g>
+      <text x="50" y="580" class="note">图例：</text>
+      <line x1="90" y1="575" x2="120" y2="575" stroke="#4CAF50" stroke-width="3"/>
+      <text x="130" y="580" class="note">实线 = 已路由的角色</text>
+      <line x1="250" y1="575" x2="280" y2="575" stroke="#F44336" stroke-width="2" stroke-dasharray="8 4"/>
+      <text x="290" y="580" class="note">虚线 = 未路由的角色</text>
+    </g>
+  </g>
+</svg>

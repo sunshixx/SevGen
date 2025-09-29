@@ -17,6 +17,8 @@
 
 ---
 
+##### <span style="color:red;"> 写在最前：实在非常抱歉由于一直在修改代码的原因，导致录制完视频之后文件过大无法上传到github，导致昨晚23.59分没能按时完成视频的提交。代码我们是遵守规则没有再进行任何变更的，仅作本次提交来提交文档材料至项目根目录下的submit_materials，希望各位评委可以理解，实在非常感谢！！！</span>
+
 ## 🎯 产品愿景
 
 ### 核心理念：深度与广度并重的AI角色扮演生态
@@ -84,7 +86,7 @@
 
 ### 👥 多角色协作聊天室
 <div align="center">
-<img src="docs/images/chatroom.png" alt="多角色聊天室界面" width="700"/>
+<img src="submit_materials/chatroom.png" alt="多角色聊天室界面" width="700"/>
 </div>
 
 - **智能角色选择**：基于用户消息内容自动选择最适合的AI角色参与对话
@@ -145,7 +147,7 @@
 ### 后端启动
 ```bash
 # 克隆项目
-git clone [repository-url]
+git clone  https://github.com/sunshixx/SevGen.git
 cd SevGen
 
 # 配置数据库
@@ -360,12 +362,6 @@ SevGen/
 ---
 
 ## 项目贡献者
-
-### 核心开发团队
-- **项目发起人 & 架构师**: [@sunshixx](https://github.com/sunshixx)
-  - 项目整体架构设计
-  - 后端核心功能开发
-  - RAG知识检索系统实现
 
 ### 第一版贡献者
 感谢以下开发者对项目初期版本的重要贡献：
