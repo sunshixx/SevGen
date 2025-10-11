@@ -21,7 +21,7 @@ spring:
     host: ${MAIL_HOST:smtp.qq.com}
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:1653719029@qq.com}
-    password: ${MAIL_PASSWORD:zhjwlugiiyzyjjab}
+    password: ${MAIL_PASSWORD:}
     default-encoding: UTF-8
     properties:
       mail:
@@ -49,7 +49,7 @@ langchain4j:
   open-ai:
     chat-model:
       base-url: https://openai.qiniu.com/v1
-      api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
+      api-key: ${OPENAI_API_KEY:}
       model-name: deepseek-v3-0324
       max-tokens: 4096
       temperature: 0.5
@@ -57,13 +57,13 @@ langchain4j:
     # 语音转文字模型配置
     speech-to-text-model:
       base-url: https://openai.qiniu.com/v1
-      api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
+      api-key: ${OPENAI_API_KEY:}
       model-name: ${OPENAI_SPEECH_TO_TEXT_MODEL:asr}
     
     # 文字转语音模型配置  
     text-to-speech-model:
       base-url: https://openai.qiniu.com/v1
-      api-key: ${OPENAI_API_KEY:sk-ab8cb5765e0aba823f22f5701c30a4c06a97f3d25846bc349bc931484599aac4}
+      api-key: ${OPENAI_API_KEY:}
       model-name: ${OPENAI_TEXT_TO_SPEECH_MODEL:tts}
       voice: ${OPENAI_TTS_VOICE:alloy}
 
